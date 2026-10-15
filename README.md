@@ -18,6 +18,7 @@ yola çıkarak hesaplar:
 - Bölümlü bobin (dağıtılmış kondansatör), bölümlü su soğutması
 - LCL seri şok tasarımı (harmonik akım hedefiyle)
 - Sekmeli arayüz, katlanabilir girdi grupları
+- Keşif paneli: çap, frekans ve alan sürgüleri; enerji akışı (şebeke → bobin → numune)
 - Ortak optimizasyon: frekans × çekirdek çapı, frekansa göre en iyi çap, parçacık ekibi için özet
 - Optimizasyon: frekans–alan haritası, H·f, gerilim, akım ve bobin gücü sınırları altında en iyi nokta
 - Nanoparçacık sekmesi: parçacığın alandaki davranışı, ısının hangi ölçekte kaldığı, pratik notlar

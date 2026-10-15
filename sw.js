@@ -1,7 +1,7 @@
 /* Servis çalışanı: uygulamayı cihaza yazar, kurulumdan sonra internet gerekmez.
    Sayfanın kendisi önce ağdan istenir (güncel sürüm), ağ yoksa önbellekten açılır.
    Yayından önce SURUM'u değiştirmek, eski önbelleğin silinmesini sağlar. */
-const SURUM = "bobin-15";
+const SURUM = "bobin-16";
 const KABUK = ["./", "./index.html", "./manifest.json", "./ikon.svg", "./ikon-192.png", "./ikon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

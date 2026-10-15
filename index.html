@@ -203,6 +203,22 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
 canvas#optCv { width: 100%; display: block; border-radius: 4px; touch-action: none; }
 pre.summary { white-space: pre-wrap; font: 13px/1.55 var(--f-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin: 0; color: var(--ink); max-width: 100%; overflow-x: auto; }
 canvas#jCv { width: 100%; display: block; border-radius: 4px; }
+.expSliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; }
+.expSliders label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: baseline; font-size: 13.5px; color: var(--ink-2); }
+.expSliders label b { font: 500 15px var(--f-mono); color: var(--ink); }
+.expSliders input[type=range] { grid-column: 1 / -1; margin: 4px 0 0; }
+.expKpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.expKpi div { background: var(--panel); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.expKpi .lab { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.expKpi .val { font: 500 18px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.expKpi .sub { font: 12px var(--f-mono); color: var(--ink-2); }
+@media (max-width: 700px) { .expKpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.flow { display: grid; grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; font-size: 13.5px; }
+.flow .bar { height: 14px; border-radius: 0 3px 3px 0; background: var(--ink-2); opacity: .55; min-width: 2px; }
+.flow .bar.hl { background: var(--copper); opacity: 1; }
+.flow .track { position: relative; height: 14px; background-image: repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px var(--dec, 12.5%)); }
+.flow .v { font: 13px var(--f-mono); text-align: right; white-space: nowrap; }
+.flow .k small { display: block; color: var(--muted); font-size: 11.5px; }
 .notes { font-size: 13.5px; color: var(--ink-2); margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-width: 95ch; }
 .rec { font-size: 14px; color: var(--ink-2); margin: 0; max-width: 75ch; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -468,6 +484,24 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
       </div>
 
       <div class="tabpanel" id="tab-isi" role="tabpanel" aria-label="Isıtma">
+      <section class="card" id="expCard">
+        <div class="card-head">
+          <h2>Keşif: çap, frekans, alan</h2>
+          <p>Sürgüleri oynatın; numuneye aktarılan güç ve gücün nereye gittiği anında hesaplanır. Sürgüler soldaki girdileri de değiştirir.</p>
+        </div>
+        <div class="expSliders">
+          <label for="expD"><span>Çekirdek çapı</span><b id="expDv"></b><input id="expD" type="range" min="4" max="30" step="0.1" value="14"></label>
+          <label for="expF"><span>Frekans</span><b id="expFv"></b><input id="expF" type="range" min="100" max="500" step="1" value="250"></label>
+          <label for="expH"><span>Alan (tepe)</span><b id="expHv"></b><input id="expH" type="range" min="0.2" max="20" step="0.05" value="4"></label>
+        </div>
+        <p class="hint" id="expNote" hidden></p>
+        <div class="expKpi" id="expKpi"></div>
+        <div class="figure">
+          <h3>Enerji akışı <small class="hint">(logaritmik ölçek; her çizgi 10 kat)</small></h3>
+          <div id="expFlow"></div>
+          <p class="cap" id="expFlowCap"></p>
+        </div>
+      </section>
       <section class="card">
         <div class="card-head">
           <h2>Numune ısıtma</h2>
@@ -1590,6 +1624,7 @@ function run() {
   renderTheory(p, e);
   renderHeat(p, e, roi);
   renderMnp(p, e);
+  renderExplore(p, e);
   renderNP(p, e);
   if (!$("tab-opt").hidden) renderOpt();
 
@@ -2191,6 +2226,65 @@ $("jCopy").addEventListener("click", () => {
   try { navigator.clipboard.writeText(t).then(done, sel); } catch (_) { sel(); }
 });
 window.addEventListener("resize", () => { if (!$("tab-opt").hidden) drawJoint(); });
+
+/* ---------- explorer: sliders + energy flow ---------- */
+let expDragging = false, expTimer = null;
+function expSet(id, v) { $(id).value = v; }
+// push slider values into the main inputs (field slider is peak H in A/m)
+function expToInputs() {
+  const d = +$("expD").value, f = +$("expF").value, H = +$("expH").value * 1000;
+  $("md").value = d;
+  $("f").value = f; $("fr").value = f;
+  const Bpk = MU0 * H, val = Bmode === "pk" ? Bpk : Bpk / Math.SQRT2;
+  $("B").value = Bunit === "mT" ? +(val * 1000).toFixed(4) : +(val / MU0 / 1000).toFixed(4);
+  $("Br").value = $("B").value;
+}
+function expQuick() {
+  const p = readParams();
+  if (validate(p)) return;
+  renderExplore(p, evaluate(p), false);
+}
+["expD", "expF", "expH"].forEach(id => $(id).addEventListener("input", () => {
+  expDragging = true; expToInputs(); expQuick();
+  clearTimeout(expTimer); expTimer = setTimeout(() => { expDragging = false; run(); }, 250);
+}));
+function renderExplore(p, e, syncSliders = true) {
+  const H = e.Bpk / MU0, f = e.f, isMnp = p.htype === "mnp" && p.mmode === "model";
+  if (syncSliders && !expDragging) { expSet("expD", p.md * 1e9); expSet("expF", f / 1000); expSet("expH", H / 1000); }
+  $("expD").disabled = !isMnp;
+  $("expNote").hidden = isMnp;
+  $("expNote").textContent = isMnp ? "" : "Çap sürgüsü yalnızca Isıtılan malzeme → Manyetik nanoparçacık → Parçacık modeli seçiliyken etkindir.";
+  $("expDv").textContent = isMnp ? `${dec(p.md * 1e9, 3)} nm` : "–";
+  $("expFv").textContent = si(f, "Hz");
+  $("expHv").textContent = `${dec(H / 1000, 3)} kA/m · ${dec(e.Bpk * 1000, 3)} mT`;
+  const hs = heatSample(p, H, f), hw = hardware(p, e), Hf = H * f;
+  // medium eddy heating in the sample: 1 mL in a Ø10 mm tube, σ = 1,5 S/m (culture medium)
+  const Rt = 0.005, Lt = p.vmnp / (Math.PI * Rt * Rt), w = 2 * Math.PI * f;
+  const Peddy = 1.5 * w * w * e.Bpk * e.Bpk * Rt * Rt / 16 * Math.PI * Rt * Rt * Lt;
+  const Pin = (e.P + hw.Pcap + hs.P) / 0.95, Pbr = Pin * 0.05;
+  const hfLvl = Hf > HF_HERGT ? "crit" : Hf > HF_BREZ ? "warn" : "good";
+  const kpi = [["Isınma hızı", `${dec(hs.rate * 60, 3)} K/dk`, "adyabatik, numunede"], ["Numuneye giden", si(hs.P, "W"), `SLP ${si(hs.spec, hs.specU)}`], ["Bobin kaybı", si(e.P, "W"), `Q = ${dec(e.Q, 3)}`], ["En yüksek gerilim", si(e.Vmax, "V"), `akım ${si(e.Ipk, "A")} tepe`], ["H·f", sci(Hf, 3), `<span class="pill ${hfLvl}" style="padding:0 8px">${hfLvl === "good" ? "Brezovich altı" : hfLvl === "warn" ? "Brezovich üstü" : "Hergt üstü"}</span>`]];
+  if (isMnp) {
+    const one = slpParticle(p, p.md, H, f), Ecyc = hs.spec * p.mrho * one.V / f;
+    kpi.push(["Parçacık başına / periyot", `${dec(Ecyc / one.kT, 2)} kT`, `2πfτ = ${dec(one.wt, 3)}`]);
+  } else kpi.push(["Verim", `%${dec(hs.P / ((e.P + hw.Pcap + hs.P) / 0.95) * 100, 2)}`, "numune / şebeke"]);
+  $("expKpi").innerHTML = kpi.map(([l, v, s2]) => `<div><span class="lab">${l}</span><span class="val">${v}</span><span class="sub">${s2}</span></div>`).join("");
+  const rows = [
+    ["Şebekeden (DC giriş)", "köprü verimi %95 varsayımı", Pin, false],
+    ["Bobin bakır kaybı", "soğutmanın taşıması gereken", e.P, false],
+    ["Köprü kaybı", "anahtarlar, sürücü", Pbr, false],
+    ["Kondansatör kaybı", "tan δ ≈ 3·10⁻⁴", hw.Pcap, false],
+    ["Numune: parçacıklar", `${dec(p.vmnp * 1e6, 3)} mL, ${dec(p.cmnp, 3)} mg/mL`, hs.P, true],
+    ["Numune: ortam girdabı", "Ø10 mm tüp, σ = 1,5 S/m", Peddy, false]
+  ];
+  const top = Math.max(...rows.map(r => r[2])), decs = Math.max(4, Math.ceil(Math.log10(top / Math.max(1e-12, Math.min(...rows.map(r => r[2]).filter(x => x > 0))))) + 1);
+  const lo = top / Math.pow(10, decs);
+  const width = v => v > lo ? Math.max(0.5, 100 * Math.log10(v / lo) / decs) : 0;
+  $("expFlow").innerHTML = `<div class="flow">` + rows.map(([k, sub, v, hl]) =>
+    `<div class="k">${k}<small>${sub}</small></div><div class="track" style="--dec:${100 / decs}%"><div class="bar${hl ? " hl" : ""}" style="width:${width(v)}%"></div></div><div class="v">${si(v, "W")}</div>`).join("") + `</div>`;
+  const share = hs.P / Pin;
+  $("expFlowCap").textContent = `Şebekeden çekilen gücün %${dec(share * 100, 2)}’si numunedeki parçacıklara gidiyor; geri kalanı bobinde, kondansatörde ve köprüde ısıya dönüşüyor. Verimi en çok bobin direnci (Q) ve parçacığın SLP’si belirler.`;
+}
 
 /* ---------- sample heating ---------- */
 const HF_BREZ = 4.85e8, HF_HERGT = 5e9;
