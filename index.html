@@ -107,9 +107,9 @@ input[type=range] { width: 100%; accent-color: var(--copper); margin: -4px 0 0; 
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
 .card-head p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 70ch; }
-.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
-.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
 .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .pill.good { background: var(--good-soft); color: var(--good); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
@@ -120,7 +120,8 @@ table.kv th + th { padding-left: 12px; }
 table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
 table.kv td.k { color: var(--ink-2); padding-right: 12px; }
 table.kv td.k small { color: var(--muted); display: block; font-size: 12px; }
-table.kv td.v { text-align: right; white-space: nowrap; }
+table.kv td.v { text-align: right; white-space: normal; overflow-wrap: anywhere; }
+table.kv td.v .nw { white-space: nowrap; }
 table.kv tr:last-child td { border-bottom: 0; }
 .figure { display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; }
 .figure .cap { font-size: 13px; color: var(--ink-2); }
@@ -815,8 +816,16 @@ function validate(p) {
   if (p.N * p.layers > 1500) return "Toplam tur sayısı 1500’ü geçmemeli.";
   return null;
 }
+// values break only at " / " and " · " separators; each piece stays on one line
+function kvVal(v) {
+  // [piece, sep, piece, sep, ...]; a status pill also starts a new piece
+  const segs = String(v).split(/ ([\/·]) | (?=<span class="pill)/);
+  const out = [];
+  for (let i = 0; i < segs.length; i += 2) out.push(`<span class="nw">${segs[i]}${segs[i + 1] ? " " + segs[i + 1] : ""}</span>`);
+  return out.join(" ");
+}
 function kv(rows) {
-  return rows.map(([k, v, s]) => `<tr><td class="k">${k}${s ? `<small>${s}</small>` : ""}</td><td class="v">${v}</td></tr>`).join("");
+  return rows.map(([k, v, s]) => `<tr><td class="k">${k}${s ? `<small>${s}</small>` : ""}</td><td class="v">${kvVal(v)}</td></tr>`).join("");
 }
 
 let timer = null, sweepTimer = null, cur = null;
