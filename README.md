@@ -16,6 +16,8 @@ yola çıkarak hesaplar:
 - Soğutma: doğal / fanlı hava ısınması, boru içi su debisi ve basınç düşümü
 - Çok katmanlı öz kapasite, sürücü ve rezonans devresi önerileri
 - Bölümlü bobin (dağıtılmış kondansatör), bölümlü su soğutması
+- LCL seri şok tasarımı (harmonik akım hedefiyle)
+- Sekmeli arayüz, katlanabilir girdi grupları
 - Güvenlik paneli: IEC 61010-1 gerilim sınırı, ICNIRP alan maruziyeti mesafeleri
 - Uç sıklaştırma (uçlarda daha küçük adım) ve en iyi ayar araması
 - Analitik uç durumlarla doğrulama testleri

@@ -81,6 +81,27 @@ header.top p { margin: 4px 0 0; color: var(--ink-2); max-width: 70ch; }
 @media (max-width: 920px) { .rail { position: static; max-height: none; } }
 fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 legend { font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--copper); padding: 0 0 6px; }
+details.grp { border-bottom: 1px solid var(--line-soft); padding-bottom: 14px; }
+details.grp:last-of-type { border-bottom: 0; }
+details.grp > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 0 10px; font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--copper); }
+details.grp > summary::-webkit-details-marker { display: none; }
+details.grp > summary > span:first-child::before { content: "▸"; display: inline-block; width: 1.1em; transition: transform .15s; }
+details.grp[open] > summary > span:first-child::before { transform: rotate(90deg); }
+details.grp:not([open]) { padding-bottom: 4px; }
+details.grp > summary:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; border-radius: 2px; }
+.sumval { font: 400 12px var(--f-mono); text-transform: none; letter-spacing: 0; color: var(--muted); text-align: right; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 3; }
+.tabs button { flex: 0 0 auto; border: 0; background: transparent; color: var(--ink-2); padding: 10px 14px 9px; font: 600 15px var(--f-display); letter-spacing: .02em; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--copper); border-bottom-color: var(--copper); }
+.tabs button:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: none; }
+.dot.good, .dot.warn, .dot.crit { display: inline-block; }
+.dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.crit { background: var(--crit); }
+.tabpanel { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.tile[data-tab] { cursor: pointer; }
+.tile[data-tab]:hover { background: var(--bg); }
+.tile[data-tab]:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) 104px; align-items: center; gap: 8px; }
 .row label { color: var(--ink-2); font-size: 14px; }
 .row label small { color: var(--muted); }
@@ -181,15 +202,18 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
 
   <div class="app">
     <aside class="rail" aria-label="Girdiler">
-      <fieldset>
-        <legend>İç hacim (boşluk)</legend>
+      <details class="grp" open>
+        <summary><span>İç hacim (boşluk)</span></summary>
+        <fieldset>
         <div class="row"><label for="Di">İç çap <small>mm</small></label><input id="Di" type="number" value="80" min="5" step="1"></div>
         <div class="row"><label for="len">Sargı uzunluğu <small>mm</small></label><input id="len" type="number" value="150" min="5" step="1"></div>
         <p class="hint">İç çap, iletkenin iç yüzeyine kadar olan serbest boşluktur.</p>
       </fieldset>
+      </details>
 
-      <fieldset>
-        <legend>Çalışma noktası</legend>
+      <details class="grp" open>
+        <summary><span>Çalışma noktası</span></summary>
+        <fieldset>
         <div class="seg" role="group" aria-label="Alan birimi">
           <button type="button" id="umT" aria-pressed="true">B · mT</button>
           <button type="button" id="ukAm" aria-pressed="false">H · kA/m</button>
@@ -205,9 +229,11 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <input id="fr" type="range" min="100" max="500" step="5" value="250" aria-label="Frekans kaydırıcısı">
         <div class="row"><label for="T">İletken sıcaklığı <small>°C</small></label><input id="T" type="number" value="40" step="5"></div>
       </fieldset>
+      </details>
 
-      <fieldset>
-        <legend>Sargı</legend>
+      <details class="grp" open>
+        <summary><span>Sargı</span></summary>
+        <fieldset>
         <div class="row"><label for="N">Tur sayısı <small>/katman</small></label><input id="N" type="number" value="15" min="1" step="1"></div>
         <input id="Nr" type="range" min="2" max="60" step="1" value="15" aria-label="Tur sayısı kaydırıcısı">
         <div class="row"><label for="layers">Katman sayısı</label><input id="layers" type="number" value="1" min="1" step="1"></div>
@@ -243,9 +269,11 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <div class="row"><label for="k">Bölüm sayısı <small>dağıtılmış C</small></label><input id="k" type="number" value="1" min="1" step="1"></div>
         <p class="hint">1’den büyükse sargı bu kadar bölüme ayrılır ve her bölümün ardına seri bir kondansatör konur; en yüksek gerilim yaklaşık bölüm sayısı kadar düşer.</p>
       </fieldset>
+      </details>
 
-      <fieldset>
-        <legend>Uç sıklaştırma</legend>
+      <details class="grp">
+        <summary><span>Uç sıklaştırma</span><span class="sumval" id="sv-ec"></span></summary>
+        <fieldset>
         <div class="seg" role="group" aria-label="Uç sıklaştırma">
           <button type="button" id="ecOff" aria-pressed="true">Eşit adım</button>
           <button type="button" id="ecOn" aria-pressed="false">Uçlar sık</button>
@@ -258,16 +286,20 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         </div>
         <p class="hint">Toplam tur sayısı değişmez; uçtaki turlar sıklaşır, ortadakiler açılır.</p>
       </fieldset>
+      </details>
 
-      <fieldset>
-        <legend>Değerlendirme bölgesi</legend>
+      <details class="grp">
+        <summary><span>Değerlendirme bölgesi</span><span class="sumval" id="sv-roi"></span></summary>
+        <fieldset>
         <div class="row"><label for="roiD">Bölge çapı <small>mm</small></label><input id="roiD" type="number" value="40" min="0" step="5"></div>
         <div class="row"><label for="roiL">Bölge uzunluğu <small>mm</small></label><input id="roiL" type="number" value="80" min="0" step="5"></div>
         <p class="hint">Numunenin duracağı merkezi silindir. Haritada kesikli çizgiyle gösterilir.</p>
       </fieldset>
+      </details>
 
-      <fieldset>
-        <legend>Soğutma</legend>
+      <details class="grp">
+        <summary><span>Soğutma</span><span class="sumval" id="sv-cool"></span></summary>
+        <fieldset>
         <div class="row"><label for="cool">Yöntem</label>
           <select id="cool">
             <option value="nat" selected>Doğal hava</option>
@@ -293,8 +325,10 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         </div>
         <div class="row"><label for="dTmax">İzin verilen yüzey ısınması <small>K</small></label><input id="dTmax" type="number" value="40" min="5" step="5"></div>
       </fieldset>
-      <fieldset>
-        <legend>Sürücü</legend>
+      </details>
+      <details class="grp">
+        <summary><span>Sürücü</span><span class="sumval" id="sv-drv"></span></summary>
+        <fieldset>
         <div class="row"><label for="Vdc">DC bara gerilimi <small>V</small></label><input id="Vdc" type="number" value="48" min="1" step="1"></div>
         <div class="row"><label for="bridge">Köprü</label>
           <select id="bridge">
@@ -302,22 +336,34 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
             <option value="half">Yarım köprü</option>
           </select>
         </div>
+        <div class="row"><label for="lclH">LCL: 3. harmonik akım <small>% temel</small></label><input id="lclH" type="number" value="20" min="1" max="100" step="1"></div>
       </fieldset>
+      </details>
       <div id="err" class="err" hidden></div>
     </aside>
 
     <main class="main">
       <section class="tiles" aria-label="Özet">
-        <div class="tile"><span class="lab">Bobin akımı</span><span class="val" id="t-I">–</span><span class="sub" id="t-I2">–</span></div>
-        <div class="tile"><span class="lab">Uç gerilimi</span><span class="val" id="t-V">–</span><span class="sub" id="t-V2">–</span></div>
-        <div class="tile"><span class="lab">Empedans</span><span class="val" id="t-Z">–</span><span class="sub" id="t-Z2">–</span></div>
-        <div class="tile"><span class="lab">Kayıp güç</span><span class="val" id="t-P">–</span><span class="sub" id="t-P2">–</span></div>
-        <div class="tile"><span class="lab">Endüktans</span><span class="val" id="t-L">–</span><span class="sub" id="t-L2">–</span></div>
-        <div class="tile"><span class="lab">AC direnç</span><span class="val" id="t-R">–</span><span class="sub" id="t-R2">–</span></div>
-        <div class="tile"><span class="lab">Bölgede düzgünlük</span><span class="val" id="t-U">–</span><span class="sub" id="t-U2">–</span></div>
-        <div class="tile"><span class="lab">Soğutma</span><span class="val txt" id="t-C">–</span><span class="sub" id="t-C2">–</span></div>
+        <div class="tile" data-tab="elek"><span class="lab">Bobin akımı</span><span class="val" id="t-I">–</span><span class="sub" id="t-I2">–</span></div>
+        <div class="tile" data-tab="guv"><span class="lab" id="t-Vlab">Uç gerilimi</span><span class="val" id="t-V">–</span><span class="sub" id="t-V2">–</span></div>
+        <div class="tile" data-tab="elek"><span class="lab">Empedans</span><span class="val" id="t-Z">–</span><span class="sub" id="t-Z2">–</span></div>
+        <div class="tile" data-tab="elek"><span class="lab">Kayıp güç</span><span class="val" id="t-P">–</span><span class="sub" id="t-P2">–</span></div>
+        <div class="tile" data-tab="elek"><span class="lab">Endüktans</span><span class="val" id="t-L">–</span><span class="sub" id="t-L2">–</span></div>
+        <div class="tile" data-tab="elek"><span class="lab">AC direnç</span><span class="val" id="t-R">–</span><span class="sub" id="t-R2">–</span></div>
+        <div class="tile" data-tab="alan"><span class="lab">Bölgede düzgünlük</span><span class="val" id="t-U">–</span><span class="sub" id="t-U2">–</span></div>
+        <div class="tile" data-tab="sog"><span class="lab">Soğutma</span><span class="val txt" id="t-C">–</span><span class="sub" id="t-C2">–</span></div>
       </section>
+      <nav class="tabs" role="tablist" aria-label="Sonuç sekmeleri">
+        <button type="button" role="tab" data-tab="alan">Alan</button>
+        <button type="button" role="tab" data-tab="elek">Elektrik</button>
+        <button type="button" role="tab" data-tab="sog">Soğutma <i class="dot" id="dot-sog"></i></button>
+        <button type="button" role="tab" data-tab="sur">Sürücü <i class="dot" id="dot-sur"></i></button>
+        <button type="button" role="tab" data-tab="guv">Güvenlik <i class="dot" id="dot-guv"></i></button>
+        <button type="button" role="tab" data-tab="tar">Tarama</button>
+        <button type="button" role="tab" data-tab="dog">Doğrulama <i class="dot" id="dot-dog"></i></button>
+      </nav>
 
+      <div class="tabpanel" id="tab-alan" role="tabpanel" aria-label="Alan">
       <section class="card" id="sec-field">
         <div class="card-head">
           <h2>Alan düzgünlüğü</h2>
@@ -343,7 +389,9 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tabpanel" id="tab-elek" role="tabpanel" aria-label="Elektrik">
       <div class="grid2">
         <section class="card">
           <div class="card-head"><h2>Empedans ve güç</h2></div>
@@ -355,7 +403,9 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <p class="rec" id="recC"></p>
         </section>
       </div>
+      </div>
 
+      <div class="tabpanel" id="tab-sog" role="tabpanel" aria-label="Soğutma">
       <section class="card">
         <div class="card-head">
           <h2>Soğutma ihtiyacı</h2>
@@ -367,7 +417,9 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         </div>
         <p class="rec" id="recCool"></p>
       </section>
+      </div>
 
+      <div class="tabpanel" id="tab-sur" role="tabpanel" aria-label="Sürücü">
       <section class="card" id="sec-hw">
         <div class="card-head">
           <h2>Sürücü ve rezonans devresi</h2>
@@ -381,13 +433,20 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <h3>Tank bağlantısı: seri mi paralel mi?</h3>
           <div class="tablewrap"><table class="kv" id="tbTank"></table></div>
         </div>
+        <div class="figure" id="lclBox">
+          <h3>LCL şoku (paralel tank için)</h3>
+          <div class="tablewrap"><table class="kv" id="tbLCL"></table></div>
+          <p class="hint" id="lclNote"></p>
+        </div>
         <div class="figure" id="segBox" hidden>
           <h3>Bölüm kondansatörleri</h3>
           <div class="tablewrap"><table class="kv" id="tbSeg"></table></div>
         </div>
         <div class="figure"><h3>Öneriler</h3><ul class="notes" id="hwRec"></ul></div>
       </section>
+      </div>
 
+      <div class="tabpanel" id="tab-guv" role="tabpanel" aria-label="Güvenlik">
       <section class="card" id="sec-safe">
         <div class="card-head">
           <h2>Güvenlik</h2>
@@ -400,7 +459,9 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <ul class="notes" id="safeRec"></ul>
         <p class="hint">Sınırlar: IEC 61010-1 erişilebilir parçalar için 33 V rms / 46,7 V tepe (kuru ortam); ICNIRP 2010 referans seviyeleri 3 kHz–10 MHz için mesleki 100 µT, genel halk 27 µT (rms). Bu sayfa ön tasarım aracıdır, kurulumun güvenlik değerlendirmesinin yerini tutmaz.</p>
       </section>
+      </div>
 
+      <div class="tabpanel" id="tab-tar" role="tabpanel" aria-label="Tarama">
       <section class="card">
         <div class="card-head">
           <h2>Tarama</h2>
@@ -427,7 +488,9 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         </div>
         <div class="chartbox" id="chSw"></div>
       </section>
+      </div>
 
+      <div class="tabpanel" id="tab-dog" role="tabpanel" aria-label="Doğrulama">
       <section class="card" id="sec-tests">
         <div class="card-head">
           <h2>Doğrulama testleri</h2>
@@ -448,11 +511,13 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <li>Öz kapasite: en dış katman için Medhurst ampirik formülü. Çok katmanlıda buna katmanlar arası kapasite eklenir: her ara yüz paralel levha (alan 2πrℓ, aralık 2t<sub>yalıtım</sub>/ε<sub>r</sub> + 0,26·d), enerji yöntemiyle uçlara indirgenir: ileri-geri sarımda C = (4/3)ΣC<sub>k</sub>/m², hep aynı yönden sarımda ΣC<sub>k</sub>/m². Tur–tur kapasitesi katman içinde ihmal edilir; ±%30 belirsizlik bekleyin.</li>
           <li>Bölümlü bobin: her turun endüktans payı (öz + diğer tüm turlarla ortak endüktans) bölümlere toplanır; her bölüm kondansatörü kendi bölümünün endüktif gerilimini sıfırlayacak şekilde C = 1/(ω²L<sub>bölüm</sub>) seçilir. Uç bölümler daha az kuplajlı olduğundan gerilimleri düşüktür. Kondansatör ve bağlantıların kaçak endüktansı ihmal edilir.</li>
           <li>Güvenlik: alan maruziyeti mesafeleri bobinin kendi alan modeliyle (rms) hesaplanır; çevredeki metal yapılar ve kablolar alanı değiştirir, ölçümle doğrulayın. Su kaçağı musluk suyu için 20 Ω·m, deiyonize su için 5 kΩ·m özdirençle tahmin edilir.</li>
+          <li>LCL: köprü → trafo → seri şok L₁ → paralel C ∥ bobin. L₁, köprünün kare dalgasındaki 3. harmonik akımı hedef oranın altında tutacak büyüklükte seçilir (X₁ ≈ R<sub>p</sub>/(9r) + X/8, R<sub>p</sub> = X²/R). Paralel kondansatör, köprünün temel frekansta saf direnç görmesi için hafifçe kaydırılır. Harmonik akımlar tam karmaşık devre çözümüyle, direnç frekanstan bağımsız varsayılarak hesaplanır.</li>
           <li>Sürücü: köprü çıkışının temel bileşeni tam köprüde 0,9·V<sub>DC</sub>, yarım köprüde 0,45·V<sub>DC</sub> (rms). Rezonansta yük saf direnç kabul edilir; trafo oranı bu direnci köprünün göreceği değere eşler. Kondansatör kaybı tan δ = 3·10⁻⁴ (polipropilen) ile tahmin edilir.</li>
           <li>Hava soğutma: doğal konveksiyon + ışınım h ≈ 10 W/m²K, fanlı hava h ≈ 40 W/m²K, iç ve dış sargı yüzeyi birlikte. Su (isteğe bağlı, yalnızca boru iletkende): 25 °C su, düz boru, Dittus–Boelter / laminer Nu = 4,36.</li>
           <li>Bakır özdirenci 1,72·10⁻⁸ Ω·m (20 °C), sıcaklık katsayısı 0,00393 /K.</li>
         </ul>
       </section>
+      </div>
     </main>
   </div>
 </div>
@@ -944,7 +1009,7 @@ function readParams() {
     OD: v("OD") / 1000, wall: v("wall") / 1000, dS: v("dS") / 1000,
     ds: v("ds") / 1000, ns: Math.round(v("ns")), dL: v("dL") / 1000,
     ec, ne: Math.round(v("ne")), ke: v("ke"),
-    wind: $("wind").value, tins: v("tins") / 1000, epsr: v("epsr"), Vdc: v("Vdc"), bridge: $("bridge").value,
+    wind: $("wind").value, tins: v("tins") / 1000, epsr: v("epsr"), Vdc: v("Vdc"), bridge: $("bridge").value, lclH: v("lclH") / 100,
     k: Math.max(1, Math.round(v("k"))), wpath: $("wpath").value, wres: parseFloat($("wtype").value), hoseL: v("hoseL") / 1000,
     roiD: v("roiD") / 1000, roiL: v("roiL") / 1000, dTw: v("dTw"), dTmax: v("dTmax"), cool: $("cool").value
   };
@@ -966,6 +1031,7 @@ function validate(p) {
   if (p.type === "litz" && p.ns * p.ds * p.ds > p.dL * p.dL) return "Litz damarları belirtilen demet çapına sığmıyor. Demet çapını büyütün veya damar sayısını azaltın.";
   if (p.layers > 1 && (p.tins < 0 || p.epsr < 1)) return "Yalıtım kalınlığı negatif, ε_r 1’den küçük olamaz.";
   if (p.Vdc <= 0) return "DC bara gerilimi pozitif olmalı.";
+  if (!(p.lclH > 0)) return "LCL harmonik akım hedefi pozitif olmalı.";
   if (p.k > 1 && p.layers > 1) return "Bölümlü bobin şimdilik yalnızca tek katmanlı sargı için hesaplanır.";
   if (p.k > p.N) return `Bölüm sayısı tur sayısını (${p.N}) geçemez.`;
   if (p.hoseL <= 0) return "Hortum boyu pozitif olmalı.";
@@ -1001,8 +1067,15 @@ function run() {
     : `= ${dec(p.B * 1000, 3)} mT (${kind}, havada B = µ₀H)`;
   $("t-I").textContent = si(e.Ipk, "A") + " tepe";
   $("t-I2").textContent = si(e.Irms, "A") + " rms";
-  $("t-V").textContent = si(e.Vpk, "V") + " tepe";
-  $("t-V2").textContent = si(e.Vrms, "V") + " rms";
+  if (e.seg) {
+    $("t-Vlab").textContent = "En yüksek gerilim";
+    $("t-V").textContent = si(e.Vmax, "V") + " tepe";
+    $("t-V2").textContent = `bölüm başına; bölümsüz ${si(e.Vpk, "V")}`;
+  } else {
+    $("t-Vlab").textContent = "Uç gerilimi";
+    $("t-V").textContent = si(e.Vpk, "V") + " tepe";
+    $("t-V2").textContent = si(e.Vrms, "V") + " rms";
+  }
   $("t-Z").textContent = si(e.Zs, "Ω");
   $("t-Z2").textContent = `${si(e.Rac, "Ω")} + j${si(e.XL, "Ω")}`;
   $("t-P").textContent = si(e.P, "W");
@@ -1105,6 +1178,11 @@ function run() {
   // cooling
   $("t-C").textContent = cool.label;
   $("t-C").style.color = `var(--${cool.level})`;
+  $("dot-sog").className = "dot " + cool.level;
+  $("sv-cool").textContent = cool.method;
+  $("sv-ec").textContent = p.ec ? `uçlar sık · ${p.ne} × ${dec(p.ke, 2)}` : "eşit adım";
+  $("sv-roi").textContent = `Ø${dec(p.roiD * 1000, 3)} × ${dec(p.roiL * 1000, 3)} mm`;
+  $("sv-drv").textContent = `${dec(p.Vdc, 3)} V · ${p.bridge === "half" ? "yarım" : "tam"}`;
   $("t-C2").textContent = `sargı ΔT ≈ ${dec(cool.dT, 2)} K`;
   $("coolPill").className = "pill " + cool.level; $("coolPill").textContent = cool.label;
   $("tbAir").innerHTML = kv([
@@ -1193,7 +1271,8 @@ function runSweep() {
 
 /* ---------- driver hints ---------- */
 function renderHW(p, e) {
-  const h = hardware(p, e);
+  const h = hardware(p, e), lcl = lclDesign(p, e, h);
+  $("dot-sur").className = "dot " + (e.Cres <= e.Cs || e.f >= e.srf ? "crit" : "");
   $("tbCap").innerHTML = kv([
     ["Toplam rezonans kapasitesi", si(e.Cres, "F"), `L = ${si(e.g.L, "H")} ile ${si(e.f, "Hz")}`],
     ["Harici kondansatör (paralel tank)", e.Cres > e.Cs ? si(e.Cres - e.Cs, "F") : `<span class="pill crit">kurulamaz</span>`, `öz kapasite ${si(e.Cs, "F")} düşülür`],
@@ -1219,10 +1298,11 @@ function renderHW(p, e) {
     row("Sekonder akımı (rms)", si(e.Irms, "A"), si(e.P / h.Vc, "A")) +
     row("Sekonder gerilimi (rms)", si(e.Irms * e.Rac, "V"), si(h.Vc, "V")) +
     row("Kablo/trafodaki reaktif akım", "tam bobin akımı", "yok, tank içinde kalır") +
-    row("Köprü ile bağlantı", "doğrudan", "seri şok gerekir (LCL)") + `</tbody>`;
+    row("Köprü ile bağlantı", "doğrudan", `seri şok ${si(lcl.L1, "H")} (LCL)`) + `</tbody>`;
   const rec = [];
   if (e.Cres <= e.Cs) rec.push(`<b>Bu frekansta rezonans kurulamaz:</b> gereken toplam kapasite (${si(e.Cres, "F")}) sargının kendi kapasitesinden (${si(e.Cs, "F")}) küçük. Aşağıdaki öneriler ancak tasarım düzeltildikten sonra anlamlıdır.`);
   const parallelBetter = e.Irms > 20 && !e.seg;
+  renderLCL(p, e, h, lcl);
   if (e.seg) rec.push(`Bölümlü bobin seri rezonanslı bir yapıdır: ${e.seg.length} kondansatörün toplamı rezonans kapasitesini oluşturur. Köprü bir eşleştirme trafosuyla bobin zincirinin uçlarına bağlanır; uçlarda yalnızca I·R ≈ ${si(e.Irms * e.Rac, "V")} rms görülür. Her kondansatör tam bobin akımını (${si(e.Irms, "A")} rms) taşır.`);
   else rec.push(parallelBetter
     ? `Bobin akımı yüksek (${si(e.Irms, "A")} rms). Kondansatörü bobin uçlarına paralel bağlayın; büyük reaktif akım yalnızca bobin ile kondansatör arasında döner, trafo ve kablolar ${si(e.P / h.Vc, "A")} gibi küçük bir akım taşır. Gerilim kaynaklı köprü paralel tankı doğrudan süremez: araya seri bir şok koyun (LCL) ya da akım kaynaklı besleme kullanın.`
@@ -1261,6 +1341,7 @@ function renderSafety(p, e, cool) {
   const Vpk = e.Vmax, Vrms = Vpk / Math.SQRT2, where = e.seg ? "bir bölüm boyunca (kondansatör uçlarında)" : "bobin ve kondansatör uçlarında";
   const over = Vpk > IEC_PK, hv = Vpk > 1000;
   $("safePill").className = "pill " + (hv ? "crit" : over ? "warn" : "good");
+  $("dot-guv").className = "dot " + (hv ? "crit" : over ? "warn" : "good");
   $("safePill").textContent = hv ? "Yüksek gerilim" : over ? "Tehlikeli gerilim: muhafaza gerekli" : "Dokunma sınırının altında";
   const occ = exposureDist(p, e, ICNIRP_OCC), pub = exposureDist(p, e, ICNIRP_PUB);
   const pill = ok => `<span class="pill ${ok ? "good" : "crit"}">${ok ? "sınır altında" : "sınır üstünde"}</span>`;
@@ -1291,6 +1372,85 @@ function renderSafety(p, e, cool) {
   rec.push(`Kapatıldıktan sonra tanktaki enerji milisaniyeler içinde söner, ancak köprünün DC bara kondansatörleri yüklü kalır. Bara üzerine boşaltma direnci koyun ve dokunmadan önce gerilimi ölçün.`);
   if (cool.water && cool.Ileak > 1e-3) rec.push(`Soğutma suyu üzerinden ${si(cool.Ileak, "A")} kaçak akım hesaplanıyor; soğutucu ve hortum bağlantıları erişilebilir olmamalı ya da topraklanmalı.`);
   $("safeRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
+}
+
+/* ---------- LCL choke ---------- */
+const cx = (re, im = 0) => ({ re, im });
+const cadd = (a, b) => cx(a.re + b.re, a.im + b.im);
+const cinv = a => { const d = a.re * a.re + a.im * a.im; return cx(a.re / d, -a.im / d); };
+const cabs = a => Math.hypot(a.re, a.im);
+// input impedance on the transformer secondary at harmonic h:
+// series choke X1 -> (shunt C with fundamental susceptance Bc) || (coil R + jX)
+function lclZin(X1, Bc, R, X, h) {
+  const Y = cadd(cinv(cx(R, h * X)), cx(0, h * Bc));
+  return cadd(cx(0, h * X1), cinv(Y));
+}
+function lclDesign(p, e, h) {
+  const X = e.XL, R = e.Rac, r = p.lclH;
+  const den = R * R + X * X, G = R / den, S = X / den;   // 1/(R + jX) = G - jS
+  const Rp = 1 / G;
+  // choke sized to keep the 3rd-harmonic current below r * fundamental (|Zin(3w)| ~ 3X1 - 3X/8)
+  const X1 = Math.min(Rp / (9 * r) + X / 8, 0.45 / G);
+  // shunt susceptance making Zin(w) purely resistive (small root keeps Re ~ Rp)
+  const B = (1 - Math.sqrt(1 - 4 * X1 * X1 * G * G)) / (2 * X1);
+  const Bc = B + S;
+  const Zin = lclZin(X1, Bc, R, X, 1), Re = Zin.re;
+  const a = Math.sqrt(Re / h.Rin);                        // secondary : primary turns
+  const I1 = Math.sqrt(e.P / Re), Vs1 = a * h.V1;
+  const [I3, I5] = [3, 5].map(k => Vs1 / k / cabs(lclZin(X1, Bc, R, X, k)));
+  return {
+    X1, L1: X1 / e.w, L1p: X1 / e.w / (a * a), a, Ct: Bc / e.w, Re, Zim: Zin.im, I1, I3, I5,
+    Ich: Math.sqrt(I1 * I1 + I3 * I3 + I5 * I5), Vch: Math.SQRT2 * I1 * X1, Qch: I1 * I1 * X1
+  };
+}
+function renderLCL(p, e, h, l) {
+  if (e.seg) {
+    $("tbLCL").innerHTML = ""; $("lclNote").textContent = "Bölümlü bobin seri rezonanslı çalışır; LCL şoku gerekmez.";
+    return;
+  }
+  const ratio = l.a >= 1 ? `1 : ${dec(l.a, 3)} (yükseltici)` : `${dec(1 / l.a, 3)} : 1 (indirici)`;
+  $("tbLCL").innerHTML = kv([
+    ["Şok endüktansı (sekonder tarafında)", si(l.L1, "H"), `X₁ = ${si(l.X1, "Ω")}, bobin L’nin ${dec(l.L1 / e.g.L, 3)} katı`],
+    ["Primer tarafına konursa", si(l.L1p, "H"), "trafo oranının karesiyle ölçeklenir"],
+    ["Paralel kondansatör (toplam / harici)", si(l.Ct, "F") + " / " + (l.Ct > e.Cs ? si(l.Ct - e.Cs, "F") : "kurulamaz"), `tam rezonans değeri ${si(e.Cres, "F")}`],
+    ["Trafo oranı (primer : sekonder)", ratio, `köprü ${si(h.Rin, "Ω")} görür`],
+    ["Şok akımı (temel / toplam rms)", si(l.I1, "A") + " / " + si(l.Ich, "A")],
+    ["Şok gerilimi (tepe) / reaktif güç", si(l.Vch, "V") + " / " + si(l.Qch, "VAr")],
+    ["3. / 5. harmonik akım", pct(l.I3 / l.I1, 2) + " / " + pct(l.I5 / l.I1, 2), "temel akıma oranla"]
+  ]);
+  $("lclNote").textContent = `Şoku hava çekirdekli ya da aralıklı düşük kayıplı ferrit (ör. 3C95/N87 sınıfı) üzerine litz telle sarın. Daha küçük şok daha fazla harmonik akım demektir; hedefi soldaki "LCL: 3. harmonik akım" girdisiyle değiştirin. Anahtarların sıfır gerilimde açılması için köprüyü rezonansın %2–5 üstünde çalıştırın.`;
+}
+
+/* ---------- tabs ---------- */
+const TABS = [...document.querySelectorAll('.tabs [role="tab"]')];
+function showTab(id, focus) {
+  if (!TABS.some(b => b.dataset.tab === id)) id = "alan";
+  for (const b of TABS) {
+    const on = b.dataset.tab === id;
+    b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1;
+    $("tab-" + b.dataset.tab).hidden = !on;
+    if (on && focus) b.focus();
+  }
+  try { localStorage.setItem("bobin-tab", id); } catch (_) {}
+  if (id === "alan") drawHeat();
+}
+TABS.forEach((b, i) => {
+  b.addEventListener("click", () => showTab(b.dataset.tab));
+  b.addEventListener("keydown", ev => {
+    const d = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0;
+    if (d) { ev.preventDefault(); showTab(TABS[(i + d + TABS.length) % TABS.length].dataset.tab, true); }
+  });
+});
+document.querySelectorAll(".tile[data-tab]").forEach(t => {
+  t.tabIndex = 0; t.setAttribute("role", "button");
+  const go = () => { showTab(t.dataset.tab); document.querySelector(".tabs").scrollIntoView({ block: "nearest" }); };
+  t.addEventListener("click", go);
+  t.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
+});
+{
+  let start = location.hash.slice(1);
+  if (!start) { try { start = localStorage.getItem("bobin-tab") || ""; } catch (_) {} }
+  showTab(start || "alan");
 }
 
 /* ---------- end compensation ---------- */
@@ -1450,6 +1610,18 @@ function selfTests() {
     const w = 2 * Math.PI * 250e3, sg = segmentsLC(ps, gs, w, 1);
     add("Bölümler", "Seri bölüm C’leri = rezonans C", "1/ΣC⁻¹ = 1/(ω²L)", 1 / (w * w * inductance(gs.turns, gs.d / 2)), 1 / sg.reduce((a, x) => a + 1 / x.C, 0), 1e-12, v => si(v, "F", 6));
   }
+  // LCL network: immittance case (X1 = Xc = X) gives Zin = X^2/R exactly
+  {
+    const R = 0.08, X = 12.9, Z = lclZin(X, 1 / X, R, X, 1);
+    add("Sürücü", "LCL, X₁ = X_C = X → Z = X²/R", "eşit reaktanslı LCL kapalı formu", X * X / R, Z.re, 1e-9, v => si(v, "Ω", 6));
+    add("Sürücü", "LCL, aynı durumda sanal kısım", "Im(Z) = 0", 1, 1 + Math.abs(Z.im) / Z.re, 1e-9, v => (v - 1).toExponential(1));
+    const pd = readParams();
+    if (!validate(pd)) {
+      const e = evaluate(pd), h = hardware(pd, e), l = lclDesign(pd, e, h);
+      add("Sürücü", "LCL tasarımı köprüye saf direnç gösterir", "mevcut tasarım: Im(Z)/Re(Z) = 0", 1, 1 + Math.abs(l.Zim) / l.Re, 1e-9, v => (v - 1).toExponential(1));
+      add("Sürücü", "LCL tasarımı istenen gücü verir", "a²·V₁²/Re(Z) = P", e.P, (l.a * h.V1) ** 2 / l.Re, 1e-9, v => si(v, "W", 6));
+    }
+  }
   // 5. resistance
   const pr = { type: "solid", dS: 2e-3, layers: 1, T: 20, len: 0.15, N: 15 }, gr = { lw: 4, pitch: 0.01, d: 2e-3, Nt: 15, segs: [{ n: 15, pitch: 0.01 }] };
   add("Direnç", "Düşük frekansta R → Rdc", "dolu tel, f = 1 Hz, ρℓ/A", 1.72e-8 * 4 / (Math.PI * 1e-6), resistance(pr, gr, 1).Rac, 1e-4, v => si(v, "Ω", 5));
@@ -1475,6 +1647,7 @@ function selfTests() {
 function renderTests() {
   const T = selfTests(), fail = T.filter(t => !t.ok).length;
   $("testSum").className = "pill " + (fail ? "crit" : "good");
+  $("dot-dog").className = "dot " + (fail ? "crit" : "good");
   $("testSum").textContent = fail ? `${fail} / ${T.length} test başarısız` : `${T.length} / ${T.length} test geçti`;
   $("tbTests").innerHTML = `<thead><tr><th>Test</th><th style="text-align:right">Analitik</th><th style="text-align:right">Model</th><th style="text-align:right">Bağıl hata</th><th style="text-align:right">Tolerans</th><th>Sonuç</th></tr></thead><tbody>` +
     T.map(t => `<tr><td>${t.name}<small>${t.group} · ${t.detail}</small></td><td class="n">${t.ref}</td><td class="n">${t.val}</td><td class="n">${t.err < 1e-12 ? "< 1e-12" : t.err.toExponential(1)}</td><td class="n">${t.tol.toExponential(0)}</td><td><span class="pill ${t.ok ? "good" : "crit"}">${t.ok ? "Geçti" : "Kaldı"}</span></td></tr>`).join("") + "</tbody>";
