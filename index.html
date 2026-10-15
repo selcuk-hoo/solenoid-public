@@ -201,6 +201,8 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
 .optctl label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2); }
 .optctl label small { color: var(--muted); }
 canvas#optCv { width: 100%; display: block; border-radius: 4px; touch-action: none; }
+pre.summary { white-space: pre-wrap; font: 13px/1.55 var(--f-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin: 0; color: var(--ink); max-width: 100%; overflow-x: auto; }
+canvas#jCv { width: 100%; display: block; border-radius: 4px; }
 .notes { font-size: 13.5px; color: var(--ink-2); margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-width: 95ch; }
 .rec { font-size: 14px; color: var(--ink-2); margin: 0; max-width: 75ch; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -572,6 +574,35 @@ canvas#optCv { width: 100%; display: block; border-radius: 4px; touch-action: no
           <div class="figure"><h3>Sonuç</h3><div class="tablewrap"><table class="kv" id="tbOpt"></table></div>
             <div><button type="button" class="btn" id="optApply">Bu noktayı uygula</button></div></div>
           <div class="figure"><h3>Yorum</h3><ul class="notes" id="optRec"></ul></div>
+        </div>
+      </section>
+      <section class="card" id="jointCard">
+        <div class="card-head">
+          <h2>Frekans, alan ve parçacık boyutu birlikte</h2>
+          <p>Her frekans ve çekirdek çapı için alan, yukarıdaki sınırların izin verdiği en yüksek değere çıkarılır (ısınma alanla artar). Malzeme, boyut dağılımı ve kabuk soldaki parçacık modelinden alınır.</p>
+        </div>
+        <div class="optctl">
+          <label for="jMode">Parçacıkların ortamı
+            <select id="jMode">
+              <option value="imm" selected>Hücre içinde (hareketsiz)</option>
+              <option value="mob">Sıvıda (Brown dönmesi var)</option>
+            </select>
+          </label>
+          <label for="jDmin">Çap aralığı <small>nm</small>
+            <span style="display:flex;gap:6px"><input id="jDmin" type="number" value="4" min="2" step="1" aria-label="En küçük çap"><input id="jDmax" type="number" value="30" min="5" step="1" aria-label="En büyük çap"></span>
+          </label>
+        </div>
+        <p class="err" id="jMsg" hidden></p>
+        <div class="figure" id="jFig">
+          <div class="heatwrap"><canvas id="jCv" height="340" aria-label="Çekirdek çapı – frekans haritası"></canvas></div>
+          <div class="legend" id="jLegend"></div>
+          <div class="readout" id="jRead">İmleci harita üzerinde gezdirin.</div>
+        </div>
+        <div class="figure"><h3>Frekansa göre en iyi çap</h3><div class="tablewrap"><table class="kv" id="tbJoint"></table></div></div>
+        <div class="figure">
+          <h3>Parçacık ekibi için özet</h3>
+          <pre class="summary" id="jSummary"></pre>
+          <div><button type="button" class="btn" id="jCopy">Özeti kopyala</button> <span class="hint" id="jCopied"></span></div>
         </div>
       </section>
       </div>
@@ -1946,6 +1977,7 @@ function renderOpt() {
     rec.push(`Bobin tur sayısı da bir seçenek: tur azalınca aynı alan için gerilim düşer, akım artar. Gerilim sınırı belirleyiciyse Sargı → Tur sayısını değiştirip yeniden bakın.`);
   }
   $("optRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
+  renderJoint(p, c);
   $("optLegend").innerHTML = `<span><i style="background:linear-gradient(90deg,${RAMP.join(",")});width:60px"></i>ısınma hızı 0 → ${dec(o.rmax * 60, 3)} K/dk (izin verilen bölgede en yüksek)</span><span><i style="background:var(--copper);border-radius:50%;width:10px;height:10px"></i>en iyi</span><span><i style="border:2px solid var(--ink);border-radius:50%;width:10px;height:10px;background:transparent"></i>mevcut</span><span><i class="ln" style="background:var(--ink-2)"></i>sınır çizgileri</span>`;
 }
 function drawOpt() {
@@ -2025,6 +2057,140 @@ $("optApply").addEventListener("click", () => {
 let optTimer = null;
 ["npUpt", "npCells", "npRc", "npDT", "npC"].forEach(id => $(id).addEventListener("input", () => cur && renderNP(cur.p, cur.e)));
 window.addEventListener("resize", () => { if (!$("tab-opt").hidden) drawOpt(); });
+
+/* ---------- joint frequency / field / particle-size optimization ---------- */
+let jointState = null;
+// highest field allowed by the constraints at each frequency column of optimize()
+function hStar(col, c) {
+  const lims = [["alan aralığı", c.Hmax], ["gerilim", c.V / col.V1], ["akım", c.I / col.I1], ["bobin gücü", Math.sqrt(c.P / col.P1)]];
+  if (c.hf) lims.push(["H·f", c.hf / col.f]);
+  return lims.reduce((a, b) => (b[1] < a[1] ? b : a));
+}
+function optJoint(p, c, imm, dmin, dmax) {
+  const nf = 41, Href = 1000, q0 = { ...p, Bmode: "pk", B: MU0 * Href };
+  const fs = [], ds = [];
+  for (let i = 0; i < nf; i++) fs.push(100e3 + 400e3 * i / (nf - 1));
+  for (let d = dmin; d <= dmax + 1e-9; d += 0.5) ds.push(d * 1e-9);
+  const pp = { ...p, mImm: imm };
+  const cols = fs.map(f => { const e = evaluate(q0, f), col = { f, I1: e.Ipk / Href, V1: e.Vmax / Href, P1: e.P / (Href * Href) }; const [lim, H] = hStar(col, c); return { ...col, H, lim }; });
+  const rate = (d, H, f) => heatSample({ ...pp, md: d }, H, f).rate;
+  const grid = []; let best = null, rmax = 0;
+  cols.forEach((col, i) => ds.forEach((d, j) => {
+    let cell;
+    if (c.obj === "rate") {
+      const r = rate(d, col.H, col.f);
+      cell = { i, j, f: col.f, d, H: col.H, rate: r, Pc: col.P1 * col.H * col.H, ok: col.H > 0 };
+    } else {
+      // smallest field reaching the target (rate ~ H^2, two secant steps), feasible if below H*
+      let H = col.H, r = rate(d, H, col.f);
+      if (r <= 0) { cell = { i, j, f: col.f, d, H, rate: 0, Pc: Infinity, ok: false }; }
+      else {
+        for (let k = 0; k < 2; k++) { H = H * Math.sqrt(c.target / r); r = rate(d, H, col.f); }
+        const ok = H <= col.H * 1.0001 && r >= 0.98 * c.target;
+        cell = { i, j, f: col.f, d, H, rate: r, Pc: col.P1 * H * H, ok };
+      }
+    }
+    cell.V = col.V1 * cell.H; cell.I = col.I1 * cell.H; cell.lim = col.lim;
+    grid.push(cell);
+    if (!cell.ok) return;
+    rmax = Math.max(rmax, c.obj === "rate" ? cell.rate : 1 / cell.Pc);
+    if (c.obj === "rate" ? (!best || cell.rate > best.rate) : (!best || cell.Pc < best.Pc)) best = cell;
+  }));
+  return { fs, ds, cols, grid, best, rmax, c, imm };
+}
+function renderJoint(p, c) {
+  const card = $("jointCard"), msg = $("jMsg");
+  const okType = p.htype === "mnp" && p.mmode === "model";
+  msg.hidden = okType; $("jFig").hidden = !okType;
+  if (!okType) { msg.textContent = "Bu bölüm için soldan Isıtılan malzeme → Manyetik nanoparçacık → Parçacık modeli seçin."; $("tbJoint").innerHTML = ""; $("jSummary").textContent = ""; return; }
+  const dmin = Math.max(2, +$("jDmin").value || 4), dmax = Math.max(dmin + 1, +$("jDmax").value || 30);
+  const imm = $("jMode").value === "imm";
+  const J = optJoint(p, c, imm, dmin, dmax), Jo = optJoint(p, c, !imm, dmin, dmax);
+  jointState = J;
+  drawJoint();
+  const b = J.best, fmtR = r => `${dec(r * 60, 3)} K/dk`;
+  // per-frequency table every 50 kHz
+  const bestAt = (S, i) => { let bb = null; for (const g of S.grid) if (g.i === i && g.ok && (S.c.obj === "rate" ? (!bb || g.rate > bb.rate) : (!bb || g.Pc < bb.Pc))) bb = g; return bb; };
+  const band = (S, i, bb) => { if (!bb) return null; const lo = [], key = S.c.obj === "rate"; for (const g of S.grid) if (g.i === i && g.ok && (key ? g.rate >= 0.8 * bb.rate : g.Pc <= 1.25 * bb.Pc)) lo.push(g.d); return [Math.min(...lo), Math.max(...lo)]; };
+  const rows = [];
+  for (let i = 0; i < J.fs.length; i += 5) {
+    const bb = bestAt(J, i), bo = bestAt(Jo, i), bd = band(J, i, bb);
+    rows.push({ f: J.fs[i], bb, bo, bd });
+  }
+  const envName = imm ? "hücre içi" : "sıvıda", othName = imm ? "sıvıda" : "hücre içi";
+  $("tbJoint").innerHTML = `<thead><tr><th style="text-align:left">Frekans</th><th style="text-align:right">En iyi çap (${envName})</th><th style="text-align:right">%80 bandı</th><th style="text-align:right">En iyi çap (${othName})</th><th style="text-align:right">Alan</th><th style="text-align:right">Alanı sınırlayan</th><th style="text-align:right">${c.obj === "rate" ? "Isınma" : "Bobin gücü"}</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="k">${si(r.f, "Hz")}</td><td class="v">${r.bb ? dec(r.bb.d * 1e9, 3) + " nm" : "–"}</td><td class="v">${r.bd ? `${dec(r.bd[0] * 1e9, 3)}–${dec(r.bd[1] * 1e9, 3)} nm` : "–"}</td><td class="v">${r.bo ? dec(r.bo.d * 1e9, 3) + " nm" : "–"}</td><td class="v">${r.bb ? dec(r.bb.H / 1000, 3) + " kA/m" : "–"}</td><td class="v">${J.cols[J.fs.indexOf(r.f)].lim}</td><td class="v">${r.bb ? (c.obj === "rate" ? fmtR(r.bb.rate) : si(r.bb.Pc, "W")) : "–"}</td></tr>`).join("") + "</tbody>";
+  $("jLegend").innerHTML = `<span><i style="background:linear-gradient(90deg,${RAMP.join(",")});width:60px"></i>${c.obj === "rate" ? `ısınma hızı 0 → ${dec(J.rmax * 60, 3)} K/dk` : "bobin gücü: koyu = az güç"}</span><span><i style="background:var(--copper);border-radius:50%;width:10px;height:10px"></i>en iyi</span><span><i style="border:2px solid var(--ink);border-radius:50%;width:10px;height:10px;background:transparent"></i>mevcut</span><span><i class="ln" style="background:var(--ink)"></i>her frekansta en iyi çap</span>`;
+  // summary for the particle team
+  const mat = (MNP_MAT[$("mmat").value] || { n: "Özel malzeme" }).n;
+  const bd = b ? band(J, b.i, b) : null;
+  const hfTxt = c.hf ? `H·f ≤ ${sci(c.hf, 3)} A/(m·s)` : "H·f sınırı yok";
+  const lines = [
+    `Varsayımlar: ${mat}, Ms = ${dec(p.mMs / 1000, 3)} kA/m, K = ${dec(p.mK / 1000, 3)} kJ/m³, log-normal σ = ${dec(p.msig, 2)}, kabuk ${dec(p.mshell * 1e9, 3)} nm, ${imm ? "hücre içinde hareketsiz" : `sıvıda (η = ${dec(p.meta * 1000, 3)} mPa·s)`}, ${dec(p.mT, 3)} °C.`,
+    `Bobin ve sınırlar: ${hfTxt}; gerilim ≤ ${dec(c.V, 4)} V tepe; akım ≤ ${dec(c.I, 4)} A tepe; bobin gücü ≤ ${dec(c.P, 4)} W.`,
+    b ? `Önerilen çalışma noktası: ${si(b.f, "Hz")}, H = ${dec(b.H / 1000, 3)} kA/m (${dec(MU0 * b.H * 1000, 3)} mT tepe).` : "Sınırlar içinde uygun nokta bulunamadı.",
+    b ? `Bu noktada en iyi çekirdek çapı: ${dec(b.d * 1e9, 3)} nm (${c.obj === "rate" ? "ısınmanın %80’i" : "gücün 1,25 katı"} içinde kalan aralık: ${dec(bd[0] * 1e9, 3)}–${dec(bd[1] * 1e9, 3)} nm). ${c.obj === "rate" ? `Beklenen ısınma (ideal, ${dec(p.cmnp, 3)} mg/mL): ${fmtR(b.rate)}.` : `Gereken bobin gücü: ${si(b.Pc, "W")}.`}` : "",
+    b ? (() => { const ks = [0.7, 1.3].map(k => bestSize({ ...p, mImm: imm, mK: p.mK * k }, b.H, b.f)[0] * 1e9); return `Anizotropiye duyarlılık: K %30 düşükse en iyi çap ${dec(ks[0], 3)} nm, %30 yüksekse ${dec(ks[1], 3)} nm. Çap hedefi, etkin K ölçülmeden kesinleştirilmemeli.`; })() : "",
+    "Frekansa göre en iyi çekirdek çapı (" + envName + " / " + othName + "):",
+    ...rows.map(r => `  ${si(r.f, "Hz")}: ${r.bb ? dec(r.bb.d * 1e9, 3) : "–"} nm / ${r.bo ? dec(r.bo.d * 1e9, 3) : "–"} nm`),
+    "Not: Rosensweig doğrusal yanıt modeli, etkileşimsiz parçacıklar. Etkin anizotropi K sonucu en çok etkileyen belirsizliktir; ZFC/FC veya AC duyarlılık ölçümüyle doğrulanmalı. Mutlak SLP genellikle 2–5 kat fazla tahmin edilir."
+  ].filter(Boolean);
+  $("jSummary").textContent = lines.join("\n");
+}
+function drawJoint() {
+  const J = jointState; if (!J) return;
+  const cv = $("jCv"), css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  const W = cv.clientWidth || 700, H = Math.min(400, Math.max(240, W * 0.45)), dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + "px";
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const ml = 54, mr = 16, mt = 10, mb = 38, pw = W - ml - mr, ph = H - mt - mb;
+  const d0 = J.ds[0], d1 = J.ds[J.ds.length - 1];
+  const X = f => ml + (f - 100e3) / 400e3 * pw, Y = d => mt + ph - (d - d0) / (d1 - d0) * ph;
+  g.fillStyle = col("--panel"); g.fillRect(0, 0, W, H);
+  const cw = pw / (J.fs.length - 1), chh = ph / (J.ds.length - 1);
+  for (const c of J.grid) {
+    const v = J.c.obj === "rate" ? c.rate / J.rmax : (c.ok ? (1 / c.Pc) / J.rmax : 0);
+    g.fillStyle = rampColor(Math.sqrt(Math.max(0, v)));
+    const x = Math.max(ml, X(c.f) - cw / 2), y = Y(c.d) - chh / 2;
+    g.fillRect(x, Math.max(mt, y), Math.min(cw + 0.6, ml + pw - x), chh + 0.6);
+    if (!c.ok) { g.fillStyle = col("--panel"); g.globalAlpha = 0.72; g.fillRect(x, Math.max(mt, y), Math.min(cw + 0.6, ml + pw - x), chh + 0.6); g.globalAlpha = 1; }
+  }
+  // ridge: best diameter at each frequency
+  g.strokeStyle = col("--ink"); g.lineWidth = 2; g.beginPath(); let st = false;
+  J.fs.forEach((f, i) => {
+    let bb = null; for (const c of J.grid) if (c.i === i && c.ok && (J.c.obj === "rate" ? (!bb || c.rate > bb.rate) : (!bb || c.Pc < bb.Pc))) bb = c;
+    if (!bb) { st = false; return; }
+    const x = X(f), y = Y(bb.d); if (!st) { g.moveTo(x, y); st = true; } else g.lineTo(x, y);
+  });
+  g.stroke();
+  g.strokeStyle = col("--line"); g.lineWidth = 1; g.strokeRect(ml, mt, pw, ph);
+  g.fillStyle = col("--muted"); g.font = "11px " + col("--f-mono"); g.textAlign = "center";
+  for (let f = 100; f <= 500; f += 100) g.fillText(f + "", X(f * 1e3), H - mb + 16);
+  g.fillText("Frekans (kHz)", ml + pw / 2, H - 6);
+  g.textAlign = "right";
+  niceTicks(d0 * 1e9, d1 * 1e9, 6).forEach(v => { if (v >= d0 * 1e9 - 1e-9 && v <= d1 * 1e9 + 1e-9) g.fillText(dec(v, 2), ml - 6, Y(v * 1e-9) + 4); });
+  g.save(); g.translate(14, mt + ph / 2); g.rotate(-Math.PI / 2); g.textAlign = "center"; g.fillText("Çekirdek çapı (nm)", 0, 0); g.restore();
+  if (cur && cur.p.md >= d0 && cur.p.md <= d1) { g.strokeStyle = col("--ink"); g.lineWidth = 2; g.beginPath(); g.arc(X(cur.e.f), Y(cur.p.md), 6, 0, 2 * Math.PI); g.stroke(); }
+  if (J.best) { g.fillStyle = col("--copper"); g.strokeStyle = col("--panel"); g.lineWidth = 2; g.beginPath(); g.arc(X(J.best.f), Y(J.best.d), 6, 0, 2 * Math.PI); g.fill(); g.stroke(); }
+  J.tf = { X, Y, ml, mt, pw, ph, d0, d1 };
+}
+$("jCv").addEventListener("pointermove", ev => {
+  const J = jointState; if (!J || !J.tf) return;
+  const rc = $("jCv").getBoundingClientRect(), x = ev.clientX - rc.left, y = ev.clientY - rc.top, t = J.tf;
+  if (x < t.ml || x > t.ml + t.pw || y < t.mt || y > t.mt + t.ph) { $("jRead").textContent = "İmleci harita üzerinde gezdirin."; return; }
+  const i = Math.round((x - t.ml) / t.pw * (J.fs.length - 1)), j = Math.round((t.mt + t.ph - y) / t.ph * (J.ds.length - 1));
+  const c = J.grid[i * J.ds.length + j]; if (!c) return;
+  $("jRead").textContent = `${si(c.f, "Hz")}, ${dec(c.d * 1e9, 3)} nm · H ${dec(c.H / 1000, 3)} kA/m (${c.lim}) · ısınma ${dec(c.rate * 60, 3)} K/dk · bobin ${si(c.Pc, "W")}${c.ok ? "" : " · uygun değil"}`;
+});
+$("jMode").addEventListener("change", () => cur && renderOpt());
+["jDmin", "jDmax"].forEach(id => $(id).addEventListener("input", () => { clearTimeout(optTimer); optTimer = setTimeout(renderOpt, 200); }));
+$("jCopy").addEventListener("click", () => {
+  const t = $("jSummary").textContent;
+  const done = () => { $("jCopied").textContent = "Kopyalandı."; setTimeout(() => $("jCopied").textContent = "", 2500); };
+  const sel = () => { const r = document.createRange(); r.selectNodeContents($("jSummary")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("jCopied").textContent = "Metin seçildi; kopyalamak için Ctrl/⌘+C."; };
+  try { navigator.clipboard.writeText(t).then(done, sel); } catch (_) { sel(); }
+});
+window.addEventListener("resize", () => { if (!$("tab-opt").hidden) drawJoint(); });
 
 /* ---------- sample heating ---------- */
 const HF_BREZ = 4.85e8, HF_HERGT = 5e9;
@@ -2436,6 +2602,17 @@ function selfTests() {
       const o = optimize(q, { obj: "rate", hf: 4.85e8, V: 1e12, I: 1e12, P: 1e12, Hmax: 6000, target: 0 });
       add("Optimizasyon", "H·f sınırında en iyi nokta en düşük frekansta", "ILP modeli, yalnız H·f sınırı: f = 100 kHz", 100e3, o.best.f, 1e-9, v => si(v, "Hz", 4));
       add("Optimizasyon", "…ve alan sınıra dayanır", "H ≤ 4,85·10⁸/f, ızgara adımı kadar", 4.85e8 / 100e3, o.best.H, 6000 / 60 / 4850 + 1e-9, v => si(v, "A/m", 4));
+    }
+  }
+  // joint optimizer: at a fixed frequency its best diameter matches a direct size search at the same field
+  {
+    const pd = readParams();
+    if (!validate(pd) && pd.htype === "mnp" && pd.mmode === "model") {
+      const c = { obj: "rate", hf: 5e9, V: 1000, I: 200, P: 300, Hmax: 30000, target: 0 };
+      const J = optJoint(pd, c, true, 4, 30), i = 20, col = J.cols[i];
+      let bb = null; for (const g of J.grid) if (g.i === i && (!bb || g.rate > bb.rate)) bb = g;
+      const bs = bestSize({ ...pd, mImm: true }, col.H, col.f);
+      add("Optimizasyon", "Ortak optimizasyon ↔ doğrudan çap araması", `${si(col.f, "Hz")}, H* = ${dec(col.H / 1000, 3)} kA/m, 0,5 nm adım`, bs[0] * 1e9, bb.d * 1e9, 0.5 / (bs[0] * 1e9) + 1e-9, v => dec(v, 3) + " nm");
     }
   }
   // 5. resistance
