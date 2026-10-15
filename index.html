@@ -185,6 +185,13 @@ table.tests td.n { font-family: var(--f-mono); font-variant-numeric: tabular-num
 table.tests td small { display: block; color: var(--muted); font-size: 12px; }
 .tablewrap { overflow-x: auto; }
 .btn { border: 1px solid var(--copper); background: var(--copper-soft); color: var(--copper); border-radius: 4px; padding: 6px 14px; font: 600 14px var(--f-body); cursor: pointer; }
+.theory article { display: flex; flex-direction: column; gap: 8px; max-width: 82ch; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.theory article p { margin: 0; color: var(--ink-2); }
+.theory h3 { font: 600 18px var(--f-display); color: var(--ink); }
+.eq .sep { display: inline-block; width: 2em; }
+.eq { font: italic 16px/1.6 "Cambria Math", "STIX Two Math", "Latin Modern Math", Cambria, "Times New Roman", serif; color: var(--ink); background: var(--bg); border-left: 2px solid var(--copper); padding: 8px 12px; border-radius: 0 4px 4px 0; overflow-x: auto; white-space: nowrap; }
+@media (max-width: 700px) { .eq { white-space: normal; } }
+.live { color: var(--copper); font-family: var(--f-mono); font-size: .92em; font-style: normal; white-space: nowrap; }
 .notes { font-size: 13.5px; color: var(--ink-2); margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-width: 95ch; }
 .rec { font-size: 14px; color: var(--ink-2); margin: 0; max-width: 75ch; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -360,6 +367,7 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <button type="button" role="tab" data-tab="sur">Sürücü <i class="dot" id="dot-sur"></i></button>
         <button type="button" role="tab" data-tab="guv">Güvenlik <i class="dot" id="dot-guv"></i></button>
         <button type="button" role="tab" data-tab="tar">Tarama</button>
+        <button type="button" role="tab" data-tab="teo">Teori</button>
         <button type="button" role="tab" data-tab="dog">Doğrulama <i class="dot" id="dot-dog"></i></button>
       </nav>
 
@@ -483,6 +491,8 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
               <option value="Z">|Z|</option>
               <option value="Q">Kalite faktörü Q</option>
               <option value="R">AC direnç</option>
+              <option value="L1">LCL şoku L₁</option>
+              <option value="a">LCL trafo oranı (sekonder/primer)</option>
             </select>
           </label>
         </div>
@@ -490,17 +500,65 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
       </section>
       </div>
 
-      <div class="tabpanel" id="tab-dog" role="tabpanel" aria-label="Doğrulama">
-      <section class="card" id="sec-tests">
+      <div class="tabpanel" id="tab-teo" role="tabpanel" aria-label="Teori">
+      <section class="card theory">
         <div class="card-head">
-          <h2>Doğrulama testleri</h2>
-          <span id="testSum" class="pill good">–</span>
+          <h2>Teori</h2>
+          <p>Simülatörün arkasındaki fizik, kısa ve formülleriyle. <span class="live">Turuncu</span> değerler sizin tasarımınızdan anlık hesaplanır.</p>
         </div>
-        <p class="rec">Hesap çekirdeği, sonucu analitik olarak bilinen uç durumlarla karşılaştırılır. Referanslar modelden bağımsız yoldan hesaplanır (kapalı form, sayısal Biot–Savart veya Neumann integrali). “Hedef alan” testi dışındakiler girdilerinizden bağımsızdır.</p>
-        <div><button type="button" class="btn" id="runTests">Testleri yeniden çalıştır</button></div>
-        <div class="tablewrap"><table class="tests" id="tbTests"></table></div>
-      </section>
 
+        <article>
+          <h3>1. Reaktif güç neden büyük ve neden tur sayısıyla düşmez?</h3>
+          <p>Bobinin içindeki alan bir enerji depolar. Bu enerji yalnızca alanın şiddetine ve hacmine bağlıdır; sargının nasıl yapıldığına bağlı değildir. Her periyotta bu enerji bobin ile kondansatör arasında gidip gelir; bu alışverişin gücü reaktif güçtür.</p>
+          <div class="eq">W = ∫ B²/(2µ₀) dV ≈ B₀² V<sub>etkin</sub> / (2µ₀) <span class="sep"></span> S = I<sub>rms</sub>² ωL = ω W<sub>tepe</sub> <span class="sep"></span> P = S / Q</div>
+          <p>Bu tasarımda W = <span class="live" id="th-W"></span>, S = ωW = <span class="live" id="th-S"></span>, Q = <span class="live" id="th-Q"></span>, dolayısıyla P = S/Q = <span class="live" id="th-P"></span>. Tur sayısı N ile L ∝ N², I ∝ 1/N olduğundan S değişmez; değişen yalnızca gerilim ile akımın paylaşımıdır: V ∝ N, I ∝ 1/N. Kaybı azaltmanın tek yolu Q’yu artırmak, yani direnci düşürmektir.</p>
+        </article>
+
+        <article>
+          <h3>2. Sonlu solenoidin alanı</h3>
+          <p>Sürekli bir akım tabakası için eksen üzerindeki alan kapalı formdadır:</p>
+          <div class="eq">B<sub>z</sub>(0, z) = (µ₀NI / 2ℓ) [ (z + ℓ/2) / √((z + ℓ/2)² + a²) − (z − ℓ/2) / √((z − ℓ/2)² + a²) ]</div>
+          <div class="eq">B₀ = µ₀NI / √(ℓ² + D²) <span class="sep"></span> B<sub>uç</sub> / B₀ = √(ℓ² + D²) / (2√(ℓ² + a²))</div>
+          <p>Uçta alan merkezdekinin yarısına yaklaşır, çünkü uçtaki nokta sargıyı yalnızca bir yanında görür. Bu tasarımda (ℓ/D = <span class="live" id="th-lD"></span>) formül uçta <span class="live" id="th-end"></span> verir; turları tek tek toplayan model <span class="live" id="th-endM"></span> buluyor. Eksen dışındaki alan için her tur, eliptik integrallerle (K, E) ifade edilen bir akım halkası olarak toplanır. Uzun bobin, uç sıklaştırma veya ek uç bobinleri bu düşüşü telafi eder.</p>
+        </article>
+
+        <article>
+          <h3>3. Endüktans</h3>
+          <p>Toplam endüktans, her tur çiftinin ortak endüktanslarının toplamıdır (Maxwell):</p>
+          <div class="eq">L = Σ<sub>i</sub> Σ<sub>j</sub> M<sub>ij</sub> <span class="sep"></span> M = µ₀√(ab) [ (2/k − k) K(k) − (2/k) E(k) ], &nbsp; k² = 4ab / ((a + b)² + d²)</div>
+          <p>Uzun bobinin L = µ₀N²A/ℓ değeri, sonlu boyda Nagaoka katsayısıyla düzeltilir: L = K<sub>N</sub> µ₀N²A/ℓ. Bu tasarımda K<sub>N</sub> = <span class="live" id="th-KN"></span>; yani uç etkileri endüktansı yaklaşık <span class="live" id="th-KNp"></span> azaltıyor.</p>
+        </article>
+
+        <article>
+          <h3>4. Deri ve yakınlık etkisi</h3>
+          <p>Yüksek frekansta akım iletkenin yüzeyinde, akım derinliği δ kalınlığında bir kabukta akar:</p>
+          <div class="eq">δ = √(ρ / (π f µ₀)) <span class="sep"></span> bu tasarımda δ = <span class="live" id="th-d"></span></div>
+          <p>Sargıda komşu turların alanı akımı ayrıca bobinin iç yüzüne iter (yakınlık etkisi). Dowell yöntemi bunu katman katman hesaplar:</p>
+          <div class="eq">F<sub>R</sub> = Δ [ (sinh 2Δ + sin 2Δ)/(cosh 2Δ − cos 2Δ) + (2(m² − 1)/3)(sinh Δ − sin Δ)/(cosh Δ + cos Δ) ], &nbsp; Δ = (0,886 d / δ) √η</div>
+          <p>Δ ≫ 1 iken tek katmanda F<sub>R</sub> ≈ Δ olur: AC direnç iletken kalınlığından bağımsızlaşır ve √f ile artar. Bu yüzden ~3δ’dan kalın iletken direnci düşürmez. Birden fazla katmanda (m²) terimi hızla büyür; yüksek frekanslı bobinler bu nedenle tek katman sarılır. Litz telde her damar δ’dan incedir ve damarlar örgüyle yer değiştirdiği için yakınlık kaybı azalır.</p>
+        </article>
+
+        <article>
+          <h3>5. Öz kapasite ve öz rezonans</h3>
+          <p>Turlar ve katmanlar arasında kapasite vardır; bu kapasite bobinle birlikte bir rezonans oluşturur:</p>
+          <div class="eq">f<sub>öz</sub> = 1 / (2π √(L C<sub>öz</sub>)) <span class="sep"></span> çok katmanda C ≈ (4/3) Σ C<sub>k</sub> / m² (ileri-geri sarım)</div>
+          <p>f<sub>öz</sub>’ün üstünde bobin kapasitif davranır ve alan üretmek için kullanılamaz. Çalışma frekansı öz rezonansın en fazla üçte biri olmalıdır. Bu tasarımda f/f<sub>öz</sub> = <span class="live" id="th-srf"></span>.</p>
+        </article>
+
+        <article>
+          <h3>6. Rezonans devresi ve sürücü</h3>
+          <p>Bobinin reaktansını bir kondansatör dengeler; böylece kaynak yalnızca kayıp gücü sağlar. Rezonansta:</p>
+          <div class="eq">seri tank: Z = R <span class="sep"></span> paralel tank: R<sub>p</sub> = (ωL)²/R = Q² R <span class="sep"></span> LCL (X₁ = X<sub>C</sub> = X): Z<sub>giriş</sub> = X²/R, &nbsp; I<sub>bobin</sub> = V / (jX)</div>
+          <p>Bu tasarımda R = <span class="live" id="th-R"></span>, R<sub>p</sub> = <span class="live" id="th-Rp"></span>. Seri tank çok küçük, paralel tank çok büyük bir direnç gösterir; trafo bunu köprünün istediği değere eşler. Eşit reaktanslı LCL bobin akımını yükten bağımsız yapar (akım kaynağı). Ancak köprünün kare dalgası V<sub>h</sub> = V₁/h genlikli harmonikler içerir. Q yüksekken temel akım küçük kaldığından harmonikler baskın olur; bu yüzden şok daha büyük seçilir (Sürücü sekmesi).</p>
+        </article>
+
+        <article>
+          <h3>7. Ölçeklenme: model teoriye uyuyor mu?</h3>
+          <p>Tasarımın tek bir parametresi değiştirilip model yeniden çalıştırılır. Çıkan oranlar üs olarak (y ∝ x<sup>n</sup>) basit teorinin beklediği değerlerle karşılaştırılır. Uç sıklaştırma ve bölümleme bu karşılaştırmada kapalıdır.</p>
+          <div class="tablewrap"><table class="kv" id="tbScale"></table></div>
+          <p class="hint" id="scaleNote"></p>
+        </article>
+      </section>
       <section class="card">
         <div class="card-head"><h2>Model ve varsayımlar</h2></div>
         <ul class="notes">
@@ -517,6 +575,18 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <li>Bakır özdirenci 1,72·10⁻⁸ Ω·m (20 °C), sıcaklık katsayısı 0,00393 /K.</li>
         </ul>
       </section>
+      </div>
+      <div class="tabpanel" id="tab-dog" role="tabpanel" aria-label="Doğrulama">
+      <section class="card" id="sec-tests">
+        <div class="card-head">
+          <h2>Doğrulama testleri</h2>
+          <span id="testSum" class="pill good">–</span>
+        </div>
+        <p class="rec">Hesap çekirdeği, sonucu analitik olarak bilinen uç durumlarla karşılaştırılır. Referanslar modelden bağımsız yoldan hesaplanır (kapalı form, sayısal Biot–Savart veya Neumann integrali). “Hedef alan” testi dışındakiler girdilerinizden bağımsızdır.</p>
+        <div><button type="button" class="btn" id="runTests">Testleri yeniden çalıştır</button></div>
+        <div class="tablewrap"><table class="tests" id="tbTests"></table></div>
+      </section>
+
       </div>
     </main>
   </div>
@@ -864,7 +934,8 @@ function niceTicks(min, max, n = 5) {
   return t;
 }
 function lineChart(box, o) {
-  const W = 640, H = 270, ml = 62, mr = 18, mt = 12, mb = 42;
+  const W = 640, H = 270, mr = 18, mt = 12, mb = 42;
+  let ml = 62;
   const xs = o.x;
   let ymin = Infinity, ymax = -Infinity;
   o.series.forEach(s => s.y.forEach(v => { if (isFinite(v)) { ymin = Math.min(ymin, v); ymax = Math.max(ymax, v); } }));
@@ -874,6 +945,8 @@ function lineChart(box, o) {
   ymax += pad; if (!o.y0) ymin -= pad;
   const xmin = xs[0], xmax = xs[xs.length - 1];
   const yt = niceTicks(ymin, ymax, 5); ymin = Math.min(ymin, yt[0]); ymax = Math.max(ymax, yt[yt.length - 1]);
+  // left margin grows with the longest tick label so the axis title never overlaps it
+  ml = Math.max(56, 34 + 6.8 * Math.max(...yt.map(v => String(o.fy(v)).length)));
   const X = v => ml + (v - xmin) / (xmax - xmin) * (W - ml - mr);
   const Y = v => mt + (1 - (v - ymin) / (ymax - ymin)) * (H - mt - mb);
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria || ""}">`;
@@ -1226,6 +1299,7 @@ function run() {
   $("recCool").textContent = cr.join(" ");
   renderHW(p, e);
   renderSafety(p, e, cool);
+  renderTheory(p, e);
 
   clearTimeout(sweepTimer); sweepTimer = setTimeout(runSweep, 30);
 }
@@ -1236,9 +1310,12 @@ function runSweep() {
   const dOpt = $("sx").querySelector('option[value="d"]');
   dOpt.disabled = p.type === "litz";
   if (sx === "d" && p.type === "litz") { $("sx").value = "f"; return runSweep(); }
-  const pick = r => ({ P: r.P, V: r.Vpk, I: r.Ipk, Z: r.Zs, Q: r.Q, R: r.Rac })[sy];
+  const pick = (r, q = p) => {
+    if (sy === "L1" || sy === "a") { const l = lclDesign(q, r, hardware(q, r)); return sy === "L1" ? l.L1 : l.a; }
+    return ({ P: r.P, V: r.Vpk, I: r.Ipk, Z: r.Zs, Q: r.Q, R: r.Rac })[sy];
+  };
   const meta = {
-    P: ["Kayıp güç", "W"], V: ["Uç gerilimi", "V"], I: ["Akım", "A"], Z: ["|Z|", "Ω"], Q: ["Q", ""], R: ["AC direnç", "Ω"]
+    P: ["Kayıp güç", "W"], V: ["Uç gerilimi", "V"], I: ["Akım", "A"], Z: ["|Z|", "Ω"], Q: ["Q", ""], R: ["AC direnç", "Ω"], L1: ["LCL şoku L₁", "H"], a: ["Trafo oranı", ""]
   }[sy];
   let xs = [], ys = [], xLabel, xName, fx, markX, xScale = 1;
   if (sx === "f") {
@@ -1247,7 +1324,7 @@ function runSweep() {
   } else if (sx === "N") {
     const nmax = Math.min(Math.floor(p.len / condOD(p)), 200);
     const step = Math.max(1, Math.ceil((nmax - 2) / 60));
-    for (let n = 2; n <= nmax; n += step) { xs.push(n); { const q = { ...p, N: n }; ys.push(validate(q) ? NaN : pick(evaluate(q))); } }
+    for (let n = 2; n <= nmax; n += step) { xs.push(n); { const q = { ...p, N: n }; ys.push(validate(q) ? NaN : pick(evaluate(q), q)); } }
     xLabel = "Tur sayısı (katman başına)"; xName = "N"; fx = v => dec(v, 3); markX = p.N;
   } else {
     const dmax = Math.min(p.len / p.N, 0.03);
@@ -1255,7 +1332,7 @@ function runSweep() {
     for (let i = 0; i <= 40; i++) {
       const d = dmin + (dmax - dmin) * i / 40;
       const q = p.type === "tube" ? { ...p, OD: d } : { ...p, dS: d };
-      xs.push(d * 1000); ys.push(validate(q) ? NaN : pick(evaluate(q)));
+      xs.push(d * 1000); ys.push(validate(q) ? NaN : pick(evaluate(q), q));
     }
     xLabel = p.type === "tube" ? `Boru dış çapı (mm), et ${dec(p.wall * 1000)} mm` : "Tel çapı (mm)"; xName = "d"; fx = v => dec(v, 3);
     markX = condOD(p) * 1000;
@@ -1372,6 +1449,42 @@ function renderSafety(p, e, cool) {
   rec.push(`Kapatıldıktan sonra tanktaki enerji milisaniyeler içinde söner, ancak köprünün DC bara kondansatörleri yüklü kalır. Bara üzerine boşaltma direnci koyun ve dokunmadan önce gerilimi ölçün.`);
   if (cool.water && cool.Ileak > 1e-3) rec.push(`Soğutma suyu üzerinden ${si(cool.Ileak, "A")} kaçak akım hesaplanıyor; soğutucu ve hortum bağlantıları erişilebilir olmamalı ya da topraklanmalı.`);
   $("safeRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
+}
+
+/* ---------- theory tab ---------- */
+const SCALE_TH = {
+  N: { L: 2, I: -1, V: 1, S: 0, P: -1 },
+  f: { L: 0, I: 0, V: 1, S: 1, P: 0.5 },
+  B: { L: 0, I: 1, V: 1, S: 2, P: 2 }
+};
+function renderTheory(p, e) {
+  const g = e.g, set = (id, v) => { $(id).textContent = v; };
+  set("th-W", si(e.W, "J")); set("th-S", si(e.S, "VAr")); set("th-Q", dec(e.Q, 3)); set("th-P", si(e.S / e.Q, "W"));
+  const a = g.aMean, D = 2 * a, l = p.len;
+  set("th-lD", dec(l / D, 3));
+  set("th-end", pct(Math.sqrt(l * l + D * D) / (2 * Math.sqrt(l * l + a * a)), 3));
+  set("th-endM", pct(fieldAt(g.turns, 0, l / 2)[1] / g.b0, 3));
+  const KN = nagaoka(D, l); set("th-KN", dec(KN, 4)); set("th-KNp", pct(1 - KN, 2));
+  set("th-d", si(e.delta, "m")); set("th-srf", dec(e.f / e.srf, 3));
+  set("th-R", si(e.Rac, "Ω")); set("th-Rp", si(e.XL * e.XL / e.Rac, "Ω"));
+  // live scaling exponents: model vs simple theory
+  const p0 = { ...p, ec: false, k: 1 }, e0 = evaluate(p0);
+  const qty = r => ({ L: r.g.L, I: r.Ipk, V: r.Vpk, S: r.S, P: r.P });
+  const base = qty(e0), rows = [], names = { N: "Tur sayısı N", f: "Frekans f", B: "Alan B" };
+  for (const key of ["N", "f", "B"]) {
+    let k = 2, q;
+    if (key === "N") { q = { ...p0, N: p0.N * 2 }; if (validate(q)) { q.N = Math.max(2, Math.round(p0.N / 2)); } k = q.N / p0.N; }
+    else if (key === "f") q = { ...p0, f: p0.f * 2 };
+    else q = { ...p0, B: p0.B * 2 };
+    if (validate(q) || k === 1) continue;
+    const r = qty(evaluate(q));
+    rows.push({ key, k, ex: Object.fromEntries(Object.keys(base).map(n => [n, Math.log(r[n] / base[n]) / Math.log(k)])) });
+  }
+  const cell = (m, t) => { const ok = Math.abs(m - t) <= 0.15; return `<span class="nw">${dec(m, 2)}</span> <span class="nw" style="color:var(--${ok ? "muted" : "warn"})">(${t >= 0 ? "" : "−"}${dec(Math.abs(t), 2)})</span>`; };
+  const cols = ["L", "I", "V", "S", "P"], lab = { L: "L", I: "I", V: "V", S: "S (reaktif)", P: "P (kayıp)" };
+  $("tbScale").innerHTML = `<thead><tr><th style="text-align:left">Değişen</th>${cols.map(c => `<th style="text-align:right">${lab[c]}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="k">${names[r.key]} <small>× ${dec(r.k, 3)}</small></td>${cols.map(c => `<td class="v">${cell(r.ex[c], SCALE_TH[r.key][c])}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  $("scaleNote").textContent = "Hücrelerde modelin bulduğu üs, parantez içinde basit teorinin beklediği üs. Sarı parantezler 0,15’ten büyük farkı gösterir. Tur sayısında kayıp üssünün farklı çıkması beklenir: aynı uzunluğa daha çok tur sığdırınca turlar sıklaşır ve yakınlık etkisi artar (teori sabit F_R varsayar). Frekansta kayıp üssü ~0,5’tir çünkü direnç √f ile artar.";
 }
 
 /* ---------- LCL choke ---------- */
