@@ -19,7 +19,7 @@ yola çıkarak hesaplar:
 - LCL seri şok tasarımı (harmonik akım hedefiyle)
 - Sekmeli arayüz, katlanabilir girdi grupları
 - Keşif paneli: çap, frekans ve alan sürgüleri; enerji akışı (şebeke → bobin → numune)
-- Malzeme ve frekans: sabit çapta malzeme seçimiyle frekans taraması (SLP ve verim), dört alan kuralı
+- Malzeme, çap ve frekans: açılır listelerle malzeme ve çap; dört modelle (Rosensweig, saf doğrusal, ölçüm ILP bandı, fiziksel üst sınır) frekansa göre enerji aktarımı
 - Ortak optimizasyon: frekans × çekirdek çapı, frekansa göre en iyi çap, parçacık ekibi için özet
 - Optimizasyon: frekans–alan haritası, H·f, gerilim, akım ve bobin gücü sınırları altında en iyi nokta
 - Nanoparçacık sekmesi: parçacığın alandaki davranışı, ısının hangi ölçekte kaldığı, pratik notlar

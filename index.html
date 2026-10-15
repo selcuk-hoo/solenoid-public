@@ -228,6 +228,7 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
 .flow .track { position: relative; height: 14px; background-image: repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px var(--dec, 12.5%)); }
 .flow .v { font: 13px var(--f-mono); text-align: right; white-space: nowrap; }
 .flow .k small { display: block; color: var(--muted); font-size: 11.5px; }
+details.mfModels > summary { cursor: pointer; font-weight: 600; color: var(--ink-2); padding: 4px 0; }
 .notes { font-size: 13.5px; color: var(--ink-2); margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-width: 95ch; }
 .rec { font-size: 14px; color: var(--ink-2); margin: 0; max-width: 75ch; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -588,12 +589,12 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
       <div class="tabpanel" id="tab-opt" role="tabpanel" aria-label="Optimizasyon">
       <section class="card" id="matCard">
         <div class="card-head">
-          <h2>Malzeme ve frekans (çap sabit)</h2>
-          <p>Çekirdek çapı sabitken seçilen malzemenin ısınması frekansla nasıl değişir? Alan, seçilen kurala göre her frekansta yeniden belirlenir. Boyut dağılımı, kabuk ve sıcaklık soldaki parçacık modelinden alınır.</p>
+          <h2>Malzeme, çap ve frekans: beklenen enerji aktarımı</h2>
+          <p>Malzeme ve çekirdek çapını seçin; parçacıklara aktarılan güç frekansa göre birkaç modelle hesaplanır. Alan her frekansta seçilen kurala göre belirlenir. Boyut dağılımı, kabuk, sıcaklık, derişim ve hacim soldaki girdilerden alınır.</p>
         </div>
         <div class="optctl">
           <label for="mfMat">Malzeme<select id="mfMat"></select></label>
-          <label for="mfD">Çekirdek çapı <small>nm</small><input id="mfD" type="number" min="2" max="60" step="0.5"></label>
+          <label for="mfD">Çekirdek çapı<select id="mfD"></select></label>
           <label for="mfEnv">Ortam
             <select id="mfEnv"><option value="imm" selected>Hücre içinde (hareketsiz)</option><option value="mob">Sıvıda</option></select>
           </label>
@@ -605,23 +606,36 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
               <option value="const">Sabit: mevcut alan</option>
             </select>
           </label>
-          <label for="mfMetric">Ölçüt
-            <select id="mfMetric">
-              <option value="slp" selected>SLP (malzeme başına ısınma)</option>
+          <label for="mfQty">Büyüklük
+            <select id="mfQty">
+              <option value="slp" selected>SLP (W/g manyetik malzeme)</option>
+              <option value="P">Numunedeki güç (W)</option>
+              <option value="rate">Isınma hızı (K/dk)</option>
+              <option value="kT">Parçacık başına periyot enerjisi (kT)</option>
               <option value="eff">Verim: numune gücü / bobin kaybı</option>
             </select>
           </label>
-          <label for="mfShow">Gösterim
-            <select id="mfShow">
-              <option value="one">Yalnız seçili malzeme</option>
-              <option value="all" selected>Tüm malzemeler</option>
-              <option value="norm">Tüm malzemeler, her biri kendi tepesine göre</option>
+          <label for="mfCmp">Karşılaştır
+            <select id="mfCmp">
+              <option value="model" selected>Modeller (seçili malzeme ve çap)</option>
+              <option value="mat">Malzemeler (seçili çap)</option>
+              <option value="dia">Çaplar (seçili malzeme)</option>
             </select>
           </label>
         </div>
+        <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="mfLog" checked> Logaritmik dikey eksen (değerler mertebelerce farklıysa)</label>
         <div class="figure"><div class="chartbox" id="chMat"></div><div class="legend" id="mfLegend"></div></div>
         <div class="tablewrap"><table class="kv" id="tbMatF"></table></div>
         <ul class="notes" id="mfRec"></ul>
+        <details class="mfModels"><summary>Modeller hakkında</summary>
+          <ul class="notes">
+            <li><b>Rosensweig, doyum düzeltmeli:</b> doğrusal yanıt kuramı; Néel ve Brown gevşemesi, log-normal boyut dağılımı, alan büyüdükçe duyarlılığın düşmesini hesaba katan kiriş düzeltmesi. ξ ≲ 1 iken güvenilir.</li>
+            <li><b>Rosensweig, saf doğrusal:</b> aynı model, doyum düzeltmesi olmadan. İki eğri arasındaki açıklık alanın parçacığı ne kadar doyurduğunu (ξ) gösterir; açıklık büyükse ikisi de şüphelidir.</li>
+            <li><b>Ölçüme dayalı ILP bandı:</b> SLP = ILP·H²·f; ticari ve literatürdeki ölçümlerin tipik aralığı 0,2–3 nH·m²/kg (çizgi: 1). Çaptan ve malzemeden bağımsızdır; “gerçek numunelerde ne görülür” referansı.</li>
+            <li><b>Fiziksel üst sınır:</b> bir periyotta aktarılabilecek en büyük enerji, alanın genliği ±H ile mıknatıslanmanın ±M<sub>s</sub> arasında gidip geldiği kare döngünün alanıdır: 4µ₀M<sub>s</sub>H. Hiçbir mekanizma bunu aşamaz.</li>
+            <li>Kapsanmayanlar: büyük, bloke parçacıklarda yüksek alandaki histerezis (Stoner–Wohlfarth), parçacıklar arası etkileşim ve kümelenme. Bu durumlarda ölçüm esastır.</li>
+          </ul>
+        </details>
       </section>
       <section class="card">
         <div class="card-head">
@@ -1311,27 +1325,44 @@ function lineChart(box, o) {
   let ymin = Infinity, ymax = -Infinity;
   o.series.forEach(s => s.y.forEach(v => { if (isFinite(v)) { ymin = Math.min(ymin, v); ymax = Math.max(ymax, v); } }));
   if (o.refY != null) { ymin = Math.min(ymin, o.refY); ymax = Math.max(ymax, o.refY); }
-  if (o.y0) ymin = Math.min(0, ymin);
-  const pad = (ymax - ymin) * 0.08 || Math.abs(ymax) * 0.05 || 1;
-  ymax += pad; if (!o.y0) ymin -= pad;
+  let yt;
+  if (o.logy) {
+    let lo = Infinity, hi = 0;
+    o.series.forEach(s => s.y.forEach(v => { if (isFinite(v) && v > 0) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }));
+    (o.areas || []).forEach(a => a.hi.forEach(v => { if (v > 0) hi = Math.max(hi, v); }));
+    if (!(hi > 0)) { lo = 1; hi = 10; }
+    const dHi = Math.ceil(Math.log10(hi)), dLo = Math.max(Math.floor(Math.log10(lo)), dHi - (o.maxDecades || 7));
+    ymin = Math.pow(10, dLo); ymax = Math.pow(10, Math.max(dHi, dLo + 1));
+    yt = []; for (let k = dLo; k <= Math.log10(ymax) + 1e-9; k++) yt.push(Math.pow(10, k));
+  } else {
+    if (o.y0) ymin = Math.min(0, ymin);
+    const pad = (ymax - ymin) * 0.08 || Math.abs(ymax) * 0.05 || 1;
+    ymax += pad; if (!o.y0) ymin -= pad;
+    yt = niceTicks(ymin, ymax, 5); ymin = Math.min(ymin, yt[0]); ymax = Math.max(ymax, yt[yt.length - 1]);
+  }
   const xmin = xs[0], xmax = xs[xs.length - 1];
-  const yt = niceTicks(ymin, ymax, 5); ymin = Math.min(ymin, yt[0]); ymax = Math.max(ymax, yt[yt.length - 1]);
   // left margin grows with the longest tick label so the axis title never overlaps it
   ml = Math.max(56, 34 + 6.8 * Math.max(...yt.map(v => String(o.fy(v)).length)));
   const X = o.logx ? v => ml + Math.log(v / xmin) / Math.log(xmax / xmin) * (W - ml - mr) : v => ml + (v - xmin) / (xmax - xmin) * (W - ml - mr);
-  const Y = v => mt + (1 - (v - ymin) / (ymax - ymin)) * (H - mt - mb);
+  const Y = o.logy ? v => mt + (1 - Math.log10(Math.max(v, ymin) / ymin) / Math.log10(ymax / ymin)) * (H - mt - mb) : v => mt + (1 - (v - ymin) / (ymax - ymin)) * (H - mt - mb);
+  const okY = v => isFinite(v) && (!o.logy || v >= ymin);
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria || ""}">`;
   if (o.band) s += `<rect class="band" x="${X(o.band[0])}" y="${mt}" width="${X(o.band[1]) - X(o.band[0])}" height="${H - mt - mb}"/>`;
   yt.forEach(v => { s += `<line class="grid" x1="${ml}" x2="${W - mr}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${ml - 8}" y="${Y(v) + 4}" text-anchor="end">${o.fy(v)}</text>`; });
   (o.xticks || niceTicks(xmin, xmax, 6)).forEach(v => { if (v >= xmin - 1e-12 && v <= xmax + 1e-12) s += `<text x="${X(v)}" y="${H - mb + 16}" text-anchor="middle">${o.fx(v)}</text>`; });
   s += `<line class="base" x1="${ml}" x2="${W - mr}" y1="${H - mb}" y2="${H - mb}"/>`;
   if (o.refY != null) s += `<line class="ref" x1="${ml}" x2="${W - mr}" y1="${Y(o.refY)}" y2="${Y(o.refY)}"/>`;
+  (o.areas || []).forEach(a => {
+    const pts = []; xs.forEach((x, i) => { if (okY(a.hi[i])) pts.push(`${X(x).toFixed(1)},${Y(a.hi[i]).toFixed(1)}`); });
+    for (let i = xs.length - 1; i >= 0; i--) pts.push(`${X(xs[i]).toFixed(1)},${Y(okY(a.lo[i]) ? a.lo[i] : ymin).toFixed(1)}`);
+    s += `<polygon points="${pts.join(" ")}" style="fill:var(--series-${a.cls});opacity:.14"/>`;
+  });
   o.series.forEach((se, k) => {
     let d = "", pen = false;
-    se.y.forEach((v, i) => { if (!isFinite(v)) { pen = false; return; } d += (pen ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(v).toFixed(1); pen = true; });
-    s += `<path class="s${se.cls || k + 1}${se.thick ? " thick" : ""}" d="${d}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    se.y.forEach((v, i) => { if (!okY(v)) { pen = false; return; } d += (pen ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(v).toFixed(1); pen = true; });
+    s += `<path class="s${se.cls || k + 1}${se.thick ? " thick" : ""}" d="${d}" stroke-linejoin="round" stroke-linecap="round"${se.dash ? ` stroke-dasharray="${se.dash}"` : ""}/>`;
   });
-  if (o.mark && isFinite(o.mark[1])) s += `<circle class="mark" r="5" cx="${X(o.mark[0])}" cy="${Y(o.mark[1])}"/>`;
+  if (o.mark && okY(o.mark[1])) s += `<circle class="mark" r="5" cx="${X(o.mark[0])}" cy="${Y(o.mark[1])}"/>`;
   s += `<text class="axl" x="${(ml + W - mr) / 2}" y="${H - 6}" text-anchor="middle">${o.xLabel}</text>`;
   s += `<text class="axl" transform="translate(14 ${(mt + H - mb) / 2}) rotate(-90)" text-anchor="middle">${o.yLabel}</text>`;
   s += `<g class="hov" visibility="hidden"><line class="cross" y1="${mt}" y2="${H - mb}"/>${o.series.map((se, k) => `<circle class="dot${se.cls || k + 1}" r="4.5"/>`).join("")}</g>`;
@@ -1349,7 +1380,7 @@ function lineChart(box, o) {
     const lines = [`<div>${o.xName}: ${o.fx(xs[bi], true)}</div>`];
     o.series.forEach((se, k) => {
       const c = hov.querySelectorAll("circle")[k], v = se.y[bi];
-      if (isFinite(v)) { c.setAttribute("cx", cx); c.setAttribute("cy", Y(v)); c.setAttribute("visibility", "visible"); }
+      if (okY(v)) { c.setAttribute("cx", cx); c.setAttribute("cy", Y(v)); c.setAttribute("visibility", "visible"); }
       else c.setAttribute("visibility", "hidden");
       lines.push(`<div>${se.name}: <b>${o.fy(v, true)}</b></div>`);
     });
@@ -1852,7 +1883,7 @@ function relax(p, d) {
 function slpParticle(p, d, Hpk, f) {
   const r = relax(p, d), wt = 2 * Math.PI * f * r.t, xi = MU0 * p.mMs * Hpk * r.V / r.kT;
   const chiI = MU0 * p.mMs * p.mMs * r.V / (3 * r.kT);
-  const chi0 = xi > 1e-4 ? chiI * 3 * (1 / Math.tanh(xi) - 1 / xi) / xi : chiI;
+  const chi0 = p.noChord || xi <= 1e-4 ? chiI : chiI * 3 * (1 / Math.tanh(xi) - 1 / xi) / xi;
   return { slp: MU0 * Math.PI * chi0 * Hpk * Hpk * f * wt / (1 + wt * wt) / p.mrho, xi, wt, chiI, ...r };
 }
 // mass-weighted average over a log-normal (number) size distribution with median d0
@@ -2159,7 +2190,8 @@ let optTimer = null;
 window.addEventListener("resize", () => { if (!$("tab-opt").hidden) drawOpt(); });
 
 /* ---------- material × frequency at fixed core size ---------- */
-const MF_F = (() => { const a = []; for (let i = 0; i <= 60; i++) a.push(10e3 * Math.pow(50, i / 60)); return a; })();
+// log grid 10–500 kHz plus the exact table frequencies
+const MF_F = (() => { const a = [50e3, 100e3, 200e3, 400e3]; for (let i = 0; i <= 60; i++) a.push(10e3 * Math.pow(50, i / 60)); return a.sort((x, y) => x - y).filter((v, i, arr) => !i || v / arr[i - 1] > 1.001); })();
 function mfField(p, f, mode) {
   if (mode === "brez") return HF_BREZ / f;
   if (mode === "hergt") return HF_HERGT / f;
@@ -2167,68 +2199,90 @@ function mfField(p, f, mode) {
   const c = optCfg(), Href = 1000, e = evaluate({ ...p, Bmode: "pk", B: MU0 * Href }, f);
   return hStar({ f, I1: e.Ipk / Href, V1: e.Vmax / Href, P1: e.P / (Href * Href) }, c)[1];
 }
+const MF_DIAS = [4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 25];
 function renderMatFreq(p) {
-  const sel = $("mfMat");
-  if (!sel.options.length) {
-    sel.innerHTML = Object.entries(MNP_MAT).map(([k, m]) => `<option value="${k}">${m.n}</option>`).join("") + `<option value="custom">Özel (soldaki M<sub>s</sub>, K)</option>`;
-  }
+  const sel = $("mfMat"), dsel = $("mfD");
+  if (!sel.options.length) sel.innerHTML = Object.entries(MNP_MAT).map(([k, m]) => `<option value="${k}">${m.n}</option>`).join("") + `<option value="custom">Özel (soldaki Ms, K)</option>`;
   sel.value = $("mmat").value;
-  if (document.activeElement !== $("mfD")) $("mfD").value = +(p.md * 1e9).toFixed(2);
-  const imm = $("mfEnv").value === "imm", mode = $("mfField").value, show = $("mfShow").value;
+  const dCur = +(p.md * 1e9).toFixed(2), ds = MF_DIAS.includes(dCur) ? MF_DIAS : [...MF_DIAS, dCur].sort((a, b) => a - b);
+  dsel.innerHTML = ds.map(d => `<option value="${d}">${dec(d, 3)} nm${MF_DIAS.includes(d) ? "" : " (soldaki)"}</option>`).join("");
+  dsel.value = String(dCur);
+  const imm = $("mfEnv").value === "imm", mode = $("mfField").value, qty = $("mfQty").value, cmp = $("mfCmp").value, logy = $("mfLog").checked;
   const base = { ...p, htype: "mnp", mmode: "model", mImm: imm };
-  const mats = [];
-  const custom = { n: "Özel", Ms: p.mMs, K: p.mK, rho: p.mrho };
-  const keySel = $("mmat").value;
-  for (const [k, m] of Object.entries(MNP_MAT)) mats.push({ k, ...m });
-  if (keySel === "custom") mats.push({ k: "custom", ...custom });
   const Hs = MF_F.map(f => mfField(base, f, mode));
-  // coil loss at each (f, H): exact scaling P ∝ H² at fixed f
   const Pc = MF_F.map((f, i) => { const e = evaluate({ ...base, Bmode: "pk", B: MU0 * 1000 }, f); return e.P / 1e6 * Hs[i] * Hs[i]; });
-  const metric = $("mfMetric").value, mass = p.cmnp * p.vmnp;   // kg of magnetic material in the sample
-  const kT = KB * (p.mT + 273.15);
-  const res = mats.map((m, idx) => {
+  const kT = KB * (p.mT + 273.15), mass = p.cmnp * p.vmnp;
+  const matOf = k => k === "custom" ? { n: "Özel", Ms: p.mMs, K: p.mK, rho: p.mrho } : MNP_MAT[k];
+  const matSel = matOf($("mmat").value) && $("mmat").value !== "custom" ? { ...MNP_MAT[$("mmat").value], Ms: p.mMs, K: p.mK } : matOf("custom");
+  // SLP (W/kg) → displayed quantity
+  const conv = (slp, i, m, d) => {
+    if (qty === "slp") return slp / 1000;
+    if (qty === "P") return slp * mass;
+    if (qty === "rate") return slp * p.cmnp / 4.18e6 * 60;
+    if (qty === "kT") return slp * m.rho * Math.PI / 6 * d ** 3 / MF_F[i] / kT;
+    return slp * mass / Pc[i];
+  };
+  const curve = (m, d, kind) => MF_F.map((f, i) => {
     const q = { ...base, mMs: m.Ms, mK: m.K, mrho: m.rho };
-    const slp = MF_F.map((f, i) => slpDist(q, Hs[i], f, p.md));
-    const y = metric === "eff" ? slp.map((v, i) => v * mass / Pc[i]) : slp;
-    let bi = 0; y.forEach((v, i) => { if (v > y[bi]) bi = i; });
-    const flat = Math.max(...slp) / Math.max(1e-300, Math.min(...slp)) < 1.15;
-    const one = slpParticle(q, p.md, Hs[bi], MF_F[bi]);
-    const at = fx => { const i = MF_F.reduce((b, f, j) => Math.abs(Math.log(f / fx)) < Math.abs(Math.log(MF_F[b] / fx)) ? j : b, 0); return y[i]; };
-    const atS = fx => { const i = MF_F.reduce((b, f, j) => Math.abs(Math.log(f / fx)) < Math.abs(Math.log(MF_F[b] / fx)) ? j : b, 0); return slp[i]; };
-    return { ...m, idx, y, slp, bi, flat, fBest: MF_F[bi], sBest: y[bi], slpBest: slp[bi], s100: atS(100e3), s400: atS(400e3), Pc: Pc[bi], wt: one.wt, xi: MU0 * m.Ms * Hs[bi] * Math.PI / 6 * p.md ** 3 / kT };
+    let slp;
+    if (kind === "lrt") slp = slpDist(q, Hs[i], f, d);
+    else if (kind === "lin") slp = slpDist({ ...q, noChord: true }, Hs[i], f, d);
+    else if (kind === "bound") slp = 4 * MU0 * m.Ms * Hs[i] * f / m.rho;
+    else slp = kind * 1e-9 * Hs[i] * Hs[i] * f;
+    return conv(slp, i, m, d);
   });
-  const selRes = res.find(r => r.k === keySel) || res[0];
-  const shown = show === "one" ? [selRes] : res;
-  const series = shown.map((r, i) => ({ name: r.n, y: show === "norm" ? r.y.map(v => r.sBest > 0 ? v / r.sBest : 0) : r.y, cls: (res.indexOf(r) % 6) + 1, thick: r === selRes && show !== "one" }));
-  const unit = show === "norm" ? "" : metric === "eff" ? "" : "W/kg";
+  let series = [], areas = [];
+  const d0 = p.md;
+  if (cmp === "model") {
+    series = [
+      { name: "Rosensweig, doyum düzeltmeli", y: curve(matSel, d0, "lrt"), cls: 1, thick: true },
+      { name: "Rosensweig, saf doğrusal", y: curve(matSel, d0, "lin"), cls: 1, dash: "5 4" },
+      { name: "Ölçüme dayalı ILP = 1", y: curve(matSel, d0, 1), cls: 3 },
+      { name: "Fiziksel üst sınır 4µ₀MₛHf", y: curve(matSel, d0, "bound"), cls: 2, dash: "2 4" }
+    ];
+    areas = [{ lo: curve(matSel, d0, 0.2), hi: curve(matSel, d0, 3), cls: 3 }];
+  } else if (cmp === "mat") {
+    const keys = Object.keys(MNP_MAT);
+    series = keys.map((k, i) => ({ name: MNP_MAT[k].n, y: curve(MNP_MAT[k], d0, "lrt"), cls: (i % 6) + 1, thick: k === $("mmat").value }));
+  } else {
+    const dd = [4, 8, 10, 12, 14, 18];
+    series = dd.map((d, i) => ({ name: `${d} nm`, y: curve(matSel, d * 1e-9, "lrt"), cls: (i % 6) + 1, thick: Math.abs(d - d0 * 1e9) < 0.01 }));
+  }
+  const U = { slp: "W/g", P: "W", rate: "K/dk", kT: "kT", eff: "" }[qty];
+  const fmtv = (v, t) => !isFinite(v) ? "–" : qty === "eff" ? sci(v * 100, t ? 3 : 2) + " %" : qty === "rate" ? `${dec(v, t ? 3 : 2)} K/dk` : qty === "kT" ? `${dec(v, t ? 3 : 2)} kT` : si(v, U, t ? 3 : 2);
+  const main = series.find(x => x.thick) || series[0];
+  let bi = 0; main.y.forEach((v, i) => { if (v > main.y[bi]) bi = i; });
   lineChart($("chMat"), {
-    x: MF_F.map(f => f / 1000), series, y0: true, logx: true, xticks: [10, 20, 50, 100, 200, 500],
-    mark: [selRes.fBest / 1000, show === "norm" ? 1 : selRes.sBest],
-    fx: v => dec(v, 3), fy: (v, t) => unit ? si(v, unit, t ? 3 : 2) : (metric === "eff" && show !== "norm" ? sci(v * 100, 2) + " %" : pct(v, t ? 3 : 2)),
-    xLabel: "Frekans (kHz, logaritmik)", yLabel: show === "norm" ? (metric === "eff" ? "Verim / kendi tepesi" : "SLP / kendi tepesi") : metric === "eff" ? "Numune gücü / bobin kaybı" : "SLP (W/kg)", xName: "f", aria: "Malzemelere göre SLP, frekansla"
+    x: MF_F.map(f => f / 1000), series, areas, y0: true, logx: true, logy, xticks: [10, 20, 50, 100, 200, 500],
+    mark: [MF_F[bi] / 1000, main.y[bi]], fx: v => dec(v, 3), fy: fmtv,
+    xLabel: "Frekans (kHz, logaritmik)", yLabel: { slp: "SLP (W/g)", P: "Numunedeki güç (W)", rate: "Isınma hızı (K/dk)", kT: "Periyot enerjisi (kT)", eff: "Numune / bobin kaybı" }[qty], xName: "f", aria: "Frekansa göre beklenen enerji aktarımı"
   });
-  $("mfLegend").innerHTML = shown.map(r => `<span><i class="ln" style="background:var(--series-${(res.indexOf(r) % 6) + 1});${r === selRes ? "height:3px" : ""}"></i>${r.n}${r === selRes && show !== "one" ? " (seçili)" : ""}</span>`).join("");
-  $("tbMatF").innerHTML = `<thead><tr><th style="text-align:left">Malzeme</th><th style="text-align:right">En iyi frekans</th><th style="text-align:right">Oradaki alan</th><th style="text-align:right">SLP orada</th><th style="text-align:right">Bobin kaybı orada</th><th style="text-align:right">SLP 100 kHz</th><th style="text-align:right">SLP 400 kHz</th><th style="text-align:right;text-transform:none">2πfτ</th><th style="text-align:right;text-transform:none">ξ</th></tr></thead><tbody>` +
-    res.map(r => `<tr${r === selRes ? ' style="font-weight:600"' : ""}><td class="k">${r.n}</td><td class="v">${si(r.fBest, "Hz")}</td><td class="v">${dec(Hs[r.bi] / 1000, 3)} kA/m</td><td class="v">${si(r.slpBest, "W/kg")}</td><td class="v">${si(r.Pc, "W")}</td><td class="v">${si(r.s100, "W/kg")}</td><td class="v">${si(r.s400, "W/kg")}</td><td class="v">${dec(r.wt, 2)}</td><td class="v"><span style="color:var(--${r.xi > 1 ? "warn" : "ink"})">${dec(r.xi, 2)}</span></td></tr>`).join("") + "</tbody>";
-  const rec = [];
-  const modeTxt = { brez: "Brezovich sınırında", hergt: "Hergt sınırında", coil: "bobin sınırlarında", const: "sabit alanda" }[mode];
-  const capMode = mode === "brez" || mode === "hergt", r = selRes, edgeLo = r.bi <= 4, edgeHi = r.bi >= MF_F.length - 3;
-  const what = metric === "eff" ? "verim (numune gücü / bobin kaybı)" : "SLP";
-  rec.push(`${dec(p.md * 1e9, 3)} nm, ${modeTxt}, ${r.n}: ${what} en yüksek ${si(r.fBest, "Hz")}’te (SLP ${si(r.slpBest, "W/kg")}, bobin kaybı ${si(r.Pc, "W")}, 2πfτ = ${dec(r.wt, 2)}).`);
-  if (r.flat) rec.push(`Bu çapta SLP frekansla neredeyse değişmiyor (tüm aralıkta %15’ten az fark). Nedeni: 2πfτ ≪ 1 ${capMode ? "ve H·f sabit; bu durumda SLP ∝ (Hf)²τ, frekans terimi sadeleşir" : "bölgesindesiniz"}. Frekansı parçacık değil bobin belirler${capMode ? ": H·f sabitken bobin kaybı ∝ f⁻¹·⁵ olduğundan yüksek frekans aynı ısınmayı daha az güçle verir. “Verim” ölçütüne geçince bu görünür" : ""}.`);
-  else if (edgeLo) rec.push(`${what === "SLP" ? "Isınma" : "Verim"} aralığın alt ucuna doğru artıyor${capMode ? ": düşük frekansta H·f sınırı daha yüksek alana izin veriyor" : ""}. ${r.xi > 1 ? `Ancak orada ξ = ${dec(r.xi, 2)}; doğrusal model geçerliliğini yitiriyor ve pratikte bobin gücü sınırlayıcı olur. “Bobin sınırlarında” kuralına geçip gerçekçi en iyiyi görün.` : ""}`);
-  else if (edgeHi) rec.push(`${what === "SLP" ? "Isınma" : "Verim"} frekansla artıyor; en iyisi aralığın üst ucunda. Bu malzeme ve çapta gevşeme hızlı (2πfτ = ${dec(r.wt, 2)}).`);
-  else if (r.xi > 1) rec.push(`${si(r.fBest, "Hz")}’teki tepe gevşemeden değil, alanın parçacığı doyuma yaklaştırmasından (ξ = ${dec(r.xi, 2)}) kaynaklanıyor; doğrusal model burada güvenilir değil. Tepenin yeri ölçümle doğrulanmalı.`);
-  else rec.push(`Belirgin bir tepe var: ${si(r.fBest, "Hz")}. Bu frekansta parçacığın gevşemesi alanla en iyi uyuşuyor${r.wt > 0.2 && r.wt < 5 ? ` (2πfτ ≈ ${dec(r.wt, 2)})` : ""}.`);
-  const bestMat = res.reduce((a, b) => (b.y[b.bi] > a.y[a.bi] ? b : a));
-  if (bestMat !== r) rec.push(`Bu çap ve kuralda en iyi malzeme ${bestMat.n} (${si(bestMat.fBest, "Hz")}). Çap sabitken malzeme, yani anizotropi K, Néel süresini ve dolayısıyla en iyi frekansı belirler.`);
-  if (r.xi > 1 && !edgeLo && false) rec.push(`En iyi noktada ξ = ${dec(r.xi, 2)}: doğrusal yanıt sınırında; ölçümle doğrulanmalı.`);
-  rec.push(`SLP malzeme kütlesi başınadır; verim, soldaki derişim (${dec(p.cmnp, 3)} mg/mL) ve hacimle (${dec(p.vmnp * 1e6, 3)} mL) hesaplanır. Model mutlak değeri genellikle 2–5 kat fazla tahmin eder; malzemeler ve frekanslar arası karşılaştırma için güvenilirdir.`);
+  $("mfLegend").innerHTML = series.map(x => `<span><i class="ln" style="background:var(--series-${x.cls});${x.thick ? "height:3px;" : ""}${x.dash ? "background:repeating-linear-gradient(90deg,var(--series-" + x.cls + ") 0 4px,transparent 4px 7px);" : ""}"></i>${x.name}</span>`).join("") + (areas.length ? `<span><i style="background:var(--series-3);opacity:.3"></i>ölçüm bandı ILP 0,2–3</span>` : "");
+  // table at round frequencies + best frequency per series
+  const at = fx => MF_F.reduce((b, f, j) => Math.abs(Math.log(f / fx)) < Math.abs(Math.log(MF_F[b] / fx)) ? j : b, 0);
+  const cols = [50e3, 100e3, 200e3, 400e3].map(at);
+  $("tbMatF").innerHTML = `<thead><tr><th style="text-align:left">${cmp === "model" ? "Model" : cmp === "mat" ? "Malzeme" : "Çap"}</th><th style="text-align:right">En iyi frekans</th><th style="text-align:right">Orada</th>${cols.map(j => `<th style="text-align:right">${si(MF_F[j], "Hz", 2)}</th>`).join("")}</tr></thead><tbody>` +
+    series.map(x => { let b = 0; x.y.forEach((v, i) => { if (v > x.y[b]) b = i; }); const fin = x.y.filter(v => v > 0), flat = fin.length && Math.max(...fin) / Math.min(...fin) < 1.05; return `<tr${x === main ? ' style="font-weight:600"' : ""}><td class="k">${x.name}</td><td class="v">${flat ? "düz (fark < %5)" : si(MF_F[b], "Hz")}</td><td class="v">${fmtv(x.y[b], true)}</td>${cols.map(j => `<td class="v">${fmtv(x.y[j], true)}</td>`).join("")}</tr>`; }).join("") +
+    `<tr><td class="k">Alan (seçilen kural)</td><td class="v"></td><td class="v"></td>${cols.map(j => `<td class="v">${dec(Hs[j] / 1000, 3)} kA/m</td>`).join("")}</tr></tbody>`;
+  // interpretation
+  const rec = [], mName = matSel.n || "Özel", dTxt = `${dec(d0 * 1e9, 3)} nm`;
+  const iA = at(100e3), iB = at(400e3);
+  const lrt = curve(matSel, d0, "lrt"), lin = curve(matSel, d0, "lin"), ilpLo = curve(matSel, d0, 0.2), ilpHi = curve(matSel, d0, 3);
+  const one = slpParticle({ ...base, mMs: matSel.Ms, mK: matSel.K, mrho: matSel.rho }, d0, Hs[iA], MF_F[iA]);
+  rec.push(`${mName}, ${dTxt}: Rosensweig modeline göre 100 kHz’te ${fmtv(lrt[iA], true)}, 400 kHz’te ${fmtv(lrt[iB], true)} (${ratioTxt(lrt[iA] / lrt[iB])}). 100 kHz’te 2πfτ = ${dec(one.wt, 2)}, ξ = ${dec(one.xi, 2)}.`);
+  if (cmp === "model") {
+    if (lrt[iA] < ilpLo[iA]) rec.push(`Model, ölçülen tipik değerlerin alt sınırının (ILP 0,2) da altında kalıyor: bu çapta gevşeme çok hızlı, parçacık neredeyse ısınmaz. Ölçümle bundan yüksek bir değer bulunursa ya çekirdek modelde varsayılandan büyük ya da etkin anizotropi daha yüksektir.`);
+    else if (lrt[iA] > ilpHi[iA]) rec.push(`Model, ölçülen tipik değerlerin üstünde (ILP 3’ün üstü). Bu ideal, etkileşimsiz parçacık içindir; gerçek numunede değer büyük olasılıkla ölçüm bandına yakın olur.`);
+    else rec.push(`Model, ölçülen tipik değerler aralığında kalıyor.`);
+    const gap = lin[iA] / lrt[iA];
+    if (gap > 1.3) rec.push(`Saf doğrusal ile düzeltmeli model arasında ${dec(gap, 2)} kat fark var: alan parçacığı belirgin biçimde doyuruyor; bu frekans–alan bölgesinde iki model de belirsiz.`);
+  }
+  if (qty !== "eff") rec.push(`Frekans seçimini yalnız ısınma değil bobin de belirler: aynı H·f’de bobin kaybı ∝ f⁻¹·⁵. Bunu görmek için “Büyüklük → Verim” seçin.`);
   $("mfRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
 }
 $("mfMat").addEventListener("change", () => { $("mmat").value = $("mfMat").value; $("mmat").dispatchEvent(new Event("change")); });
-$("mfD").addEventListener("input", () => { const v = +$("mfD").value; if (v > 0) { $("md").value = v; schedule(); } });
-["mfEnv", "mfField", "mfShow", "mfMetric"].forEach(id => $(id).addEventListener("change", () => cur && renderMatFreq(cur.p)));
+$("mfD").addEventListener("change", () => { $("md").value = $("mfD").value; schedule(); });
+["mfEnv", "mfField", "mfQty", "mfCmp", "mfLog"].forEach(id => $(id).addEventListener("change", () => cur && renderMatFreq(cur.p)));
 
 /* ---------- joint frequency / field / particle-size optimization ---------- */
 let jointState = null;
@@ -2867,6 +2921,17 @@ function selfTests() {
       const bs = bestSize({ ...pd, mImm: true }, col.H, col.f);
       add("Optimizasyon", "Ortak optimizasyon ↔ doğrudan çap araması", `${si(col.f, "Hz")}, H* = ${dec(col.H / 1000, 3)} kA/m, 0,5 nm adım`, bs[0] * 1e9, bb.d * 1e9, 0.5 / (bs[0] * 1e9) + 1e-9, v => dec(v, 3) + " nm");
     }
+  }
+  // energy-transfer models: square-loop bound ≥ linear ≥ chord-corrected Rosensweig
+  {
+    const pp = { mMs: 446e3, mK: 23e3, mrho: 5180, mT: 37, mshell: 2e-9, meta: 0.69e-3, mImm: true, msig: 0.1 };
+    let worst = 0, order = true;
+    for (const d of [4e-9, 10e-9, 14e-9, 20e-9]) for (const f of [20e3, 100e3, 400e3]) for (const H of [500, 5000, 30000]) {
+      const c = slpDist(pp, H, f, d), l = slpDist({ ...pp, noChord: true }, H, f, d), bnd = 4 * MU0 * pp.mMs * H * f / pp.mrho;
+      worst = Math.max(worst, c / bnd); if (l < c * (1 - 1e-12)) order = false;
+    }
+    add("Nanoparçacık", "Model ≤ fiziksel üst sınır", `Rosensweig / (4µ₀MsHf/ρ), 36 nokta; en büyük oran ${dec(worst, 3)}`, 1, worst <= 1 ? 1 : worst, 1e-12, v => v === 1 ? "≤ 1" : dec(v, 3));
+    add("Nanoparçacık", "Doyum düzeltmesi yalnız azaltır", "saf doğrusal ≥ düzeltmeli, 36 nokta", 1, order ? 1 : 0, 1e-12, v => v ? "evet" : "hayır");
   }
   // 5. resistance
   const pr = { type: "solid", dS: 2e-3, layers: 1, T: 20, len: 0.15, N: 15 }, gr = { lw: 4, pitch: 0.01, d: 2e-3, Nt: 15, segs: [{ n: 15, pitch: 0.01 }] };
