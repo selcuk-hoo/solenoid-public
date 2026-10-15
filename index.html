@@ -311,10 +311,34 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           </select>
         </div>
         <div id="g-mnp" style="display:flex;flex-direction:column;gap:10px">
-          <div class="row"><label for="ilp">ILP <small>nH·m²/kg</small></label><input id="ilp" type="number" value="1.5" min="0.01" step="0.1"></div>
+          <div class="seg" role="group" aria-label="Nanoparçacık modeli">
+            <button type="button" id="mmModel" aria-pressed="true">Parçacık modeli</button>
+            <button type="button" id="mmIlp" aria-pressed="false">Ölçülmüş ILP</button>
+          </div>
+          <div id="g-mmodel" style="display:flex;flex-direction:column;gap:10px">
+            <div class="row"><label for="mmat">Malzeme</label>
+              <select id="mmat">
+                <option value="fe3o4" selected>Manyetit Fe₃O₄</option>
+                <option value="fe2o3">Maghemit γ-Fe₂O₃</option>
+                <option value="cofe">Kobalt ferrit CoFe₂O₄</option>
+                <option value="custom">Özel</option>
+              </select>
+            </div>
+            <div class="row"><label for="mMs">M<sub>s</sub> <small>kA/m</small></label><input id="mMs" type="number" value="446" min="1" step="1"></div>
+            <div class="row"><label for="mK">Anizotropi K <small>kJ/m³</small></label><input id="mK" type="number" value="23" min="0.1" step="0.5"></div>
+            <div class="row"><label for="md">Çekirdek çapı <small>nm</small></label><input id="md" type="number" value="14" min="2" max="60" step="0.5"></div>
+            <div class="row"><label for="msig">Boyut dağılımı σ <small>log-normal</small></label><input id="msig" type="number" value="0.1" min="0" max="0.6" step="0.05"></div>
+            <div class="row"><label for="mshell">Kabuk kalınlığı <small>nm</small></label><input id="mshell" type="number" value="2" min="0" step="0.5"></div>
+            <div class="row"><label for="meta">Ortam viskozitesi <small>mPa·s</small></label><input id="meta" type="number" value="0.69" min="0.1" step="0.1"></div>
+            <div class="row"><label for="mT">Sıcaklık <small>°C</small></label><input id="mT" type="number" value="37" step="1"></div>
+            <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="mImm"> Parçacıklar hareketsiz (hücre içi, jel): Brown dönmesi yok</label>
+          </div>
+          <div id="g-milp" hidden style="flex-direction:column;gap:10px">
+            <div class="row"><label for="ilp">ILP <small>nH·m²/kg</small></label><input id="ilp" type="number" value="1.5" min="0.01" step="0.1"></div>
           <div class="row"><label for="cmnp">Derişim <small>mg/mL</small></label><input id="cmnp" type="number" value="5" min="0.01" step="0.5"></div>
           <div class="row"><label for="vmnp">Numune hacmi <small>mL</small></label><input id="vmnp" type="number" value="1" min="0.01" step="0.5"></div>
-          <p class="hint">ILP = SLP/(H²f): ölçülmüş içsel kayıp gücü. Ticari ferroakışkanlarda tipik 0,2–3 nH·m²/kg.</p>
+            <p class="hint">ILP = SLP/(H²f): ölçülmüş içsel kayıp gücü. Ticari ferroakışkanlarda tipik 0,2–3 nH·m²/kg.</p>
+          </div>
         </div>
         <div id="g-tis" hidden style="flex-direction:column;gap:10px">
           <div class="row"><label for="sig">İletkenlik σ <small>S/m</small></label><input id="sig" type="number" value="0.6" min="0.001" step="0.1"></div>
@@ -446,6 +470,20 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <div class="figure"><h3>Isıtma gücü</h3><table class="kv" id="tbHeat"></table></div>
           <div class="figure"><h3>Alan ve frekans sınırı</h3><table class="kv" id="tbHf"></table></div>
         </div>
+      </section>
+      <section class="card" id="mnpCard">
+        <div class="card-head">
+          <h2>Parçacık: hepsi aynı ısınmaz</h2>
+          <p>Isınma, mıknatıslanmanın alanı ne kadar geriden izlediğine, yani gevşeme süresine bağlıdır; bu süre çap, malzeme ve ortamla mertebelerce değişir. Rosensweig doğrusal yanıt modeli; Néel ve Brown gevşemesi, log-normal boyut dağılımı.</p>
+        </div>
+        <div class="grid2">
+          <div class="figure"><h3>Bu parçacık</h3><table class="kv" id="tbMnp"></table></div>
+          <div class="figure"><h3>Malzemeler en iyi çaplarında</h3><div class="tablewrap"><table class="kv" id="tbMat"></table></div><p class="hint" id="matNote"></p></div>
+        </div>
+        <div class="figure"><h3>SLP – çekirdek çapı</h3><div class="chartbox" id="chSize"></div>
+          <div class="legend"><span><i class="ln" style="background:var(--series-1)"></i>sıvı içinde (Néel + Brown)</span><span><i class="ln" style="background:var(--series-2)"></i>hareketsiz (yalnız Néel)</span></div>
+          <div class="cap">Mevcut alan ve frekansta, seçili malzeme ve boyut dağılımıyla. Turuncu nokta seçili çap.</div></div>
+        <ul class="notes" id="mnpRec"></ul>
       </section>
       <section class="card">
         <div class="card-head">
@@ -674,6 +712,8 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <h3>8. Isıtma: alanın ve frekansın katkısı</h3>
           <p>Manyetik nanoparçacıklarda kayıp, mıknatıslanmanın alanın gerisinde kalmasından doğar. Doğrusal yanıt kuramına (Rosensweig) göre:</p>
           <div class="eq">P = µ₀ π χ₀ H² f · 2πfτ / (1 + (2πfτ)²) <span class="sep"></span> SLP = ILP · H² f</div>
+          <div class="eq">τ<sub>N</sub> = (√π/2) τ₀ e<sup>Γ</sup>/√Γ, &nbsp; Γ = KV/kT <span class="sep"></span> τ<sub>B</sub> = 3ηV<sub>H</sub>/kT <span class="sep"></span> 1/τ = 1/τ<sub>N</sub> + 1/τ<sub>B</sub></div>
+          <p>Parçacıklar aynı değildir: Néel süresi çekirdek hacmiyle üstel büyüdüğü için birkaç nanometrelik çap farkı τ’yu yüzlerce kat değiştirir. En çok ısınma 2πfτ ≈ 1 olan parçacıklardan gelir. Brown dönmesi parçacık hücreye girip hareketsiz kalınca durur. Isıtma sekmesindeki parçacık modeli bunları hesaplar.</p>
           <p>Alan her zaman karesiyle girer. Frekansın katkısı ise parçacığın gevşeme süresi τ’ya bağlıdır: 2πfτ ≪ 1 iken P ∝ f², 2πfτ ≫ 1 iken P frekanstan bağımsızlaşır. Ölçülmüş ILP ile yapılan hesap bu aradaki P ∝ f davranışını varsayar. İletken doku ve sıvılarda ısıyı girdap akımları üretir; metal parçada ise akım derinliği küçük olduğu için yüzey ısınır:</p>
           <div class="eq">doku: P<sub>v</sub> = σ ω² B² R² / 16 <span class="sep"></span> metal (δ ≪ R): P/A = ½ H² √(π f µ₀ µ<sub>r</sub> ρ)</div>
           <p>Canlı dokuda girdap ısınması istenmeyen etkidir ve f²H² ile büyür. Bu yüzden hipertermide H·f çarpımı sınırlanır (Atkinson–Brezovich: 4,85·10⁸ A/(m·s); Hergt–Dutz: 5·10⁹ A/(m·s), küçük vücut bölgeleri için). H·f sabitken nanoparçacık ısınması ∝ H²f = (Hf)²/f olur: düşük frekans ve yüksek alan daha çok ısıtır. Bu tasarımda H·f = <span class="live" id="th-Hf"></span>.</p>
@@ -722,12 +762,14 @@ function dec(x, sig = 3) {
   if (!isFinite(x)) return "–";
   if (x === 0) return "0";
   const a = Math.abs(x);
+  if (a < 1e-4 || a >= 1e9) return sci(x, sig);
   const digits = Math.max(0, sig - 1 - Math.floor(Math.log10(a)));
   return x.toFixed(Math.min(digits, 6)).replace(".", ",");
 }
 function si(x, unit, sig = 3) {
   if (!isFinite(x)) return "–";
   if (x === 0) return "0 " + unit;
+  if (Math.abs(x) >= 1e12 || Math.abs(x) < 1e-15) return sci(x, sig) + " " + unit;
   const pre = [[1e9, "G"], [1e6, "M"], [1e3, "k"], [1, ""], [1e-3, "m"], [1e-6, "µ"], [1e-9, "n"], [1e-12, "p"]];
   const a = Math.abs(x);
   for (const [s, p] of pre) if (a >= s * 0.9995) return dec(x / s, sig) + " " + p + unit;
@@ -735,10 +777,18 @@ function si(x, unit, sig = 3) {
 }
 // 9,95·10⁸ style
 function sci(x, sig = 3) {
-  if (!isFinite(x) || x === 0) return dec(x, sig);
-  const e = Math.floor(Math.log10(Math.abs(x))), m = x / Math.pow(10, e);
+  if (!isFinite(x) || x === 0) return String(x);
+  let e = Math.floor(Math.log10(Math.abs(x))), m = x / Math.pow(10, e);
+  if (+Math.abs(m).toFixed(sig - 1) >= 10) { m /= 10; e += 1; }
   const sup = String(e).replace(/-/g, "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
-  return `${dec(m, sig)}·10${sup}`;
+  return `${m.toFixed(sig - 1).replace(".", ",")}·10${sup}`;
+}
+// "%58", "1/2400", "3,1 katı" style ratio text
+function ratioTxt(r) {
+  if (!isFinite(r)) return "–";
+  if (r >= 2) return `${dec(r, 2)} katı`;
+  if (r >= 0.01) return `%${dec(r * 100, 2)}’i`;
+  return `yaklaşık ${sci(r, 2)}’i`;
 }
 const pct = (x, sig = 2) => isFinite(x) ? dec(x * 100, sig) + " %" : "–";
 
@@ -1200,7 +1250,7 @@ $("heat").addEventListener("pointermove", ev => {
 });
 
 /* ---------- UI wiring ---------- */
-let Bmode = "pk", Bunit = "mT", ec = false;
+let Bmode = "pk", Bunit = "mT", ec = false, mmode = "model";
 function readParams() {
   const v = id => parseFloat($(id).value);
   return {
@@ -1209,7 +1259,7 @@ function readParams() {
     OD: v("OD") / 1000, wall: v("wall") / 1000, dS: v("dS") / 1000,
     ds: v("ds") / 1000, ns: Math.round(v("ns")), dL: v("dL") / 1000,
     ec, ne: Math.round(v("ne")), ke: v("ke"),
-    htype: $("htype").value, ilp: v("ilp") * 1e-9, cmnp: v("cmnp"), vmnp: v("vmnp") * 1e-6, sig: v("sig"), dtis: v("dtis") / 1000, ltis: v("ltis") / 1000, rhom: v("rhom") * 1e-8, mur: v("mur"), dmet: v("dmet") / 1000, lmet: v("lmet") / 1000,
+    htype: $("htype").value, mmode, mMs: v("mMs") * 1e3, mK: v("mK") * 1e3, mrho: (MNP_MAT[$("mmat").value] || MNP_MAT.fe3o4).rho, md: v("md") * 1e-9, msig: v("msig"), mshell: v("mshell") * 1e-9, meta: v("meta") * 1e-3, mT: v("mT"), mImm: $("mImm").checked, ilp: v("ilp") * 1e-9, cmnp: v("cmnp"), vmnp: v("vmnp") * 1e-6, sig: v("sig"), dtis: v("dtis") / 1000, ltis: v("ltis") / 1000, rhom: v("rhom") * 1e-8, mur: v("mur"), dmet: v("dmet") / 1000, lmet: v("lmet") / 1000,
     wind: $("wind").value, tins: v("tins") / 1000, epsr: v("epsr"), Vdc: v("Vdc"), bridge: $("bridge").value, lclH: v("lclH") / 100,
     k: Math.max(1, Math.round(v("k"))), wpath: $("wpath").value, wres: parseFloat($("wtype").value), hoseL: v("hoseL") / 1000,
     roiD: v("roiD") / 1000, roiL: v("roiL") / 1000, dTw: v("dTw"), dTmax: v("dTmax"), cool: $("cool").value
@@ -1235,6 +1285,7 @@ function validate(p) {
   if (!(p.lclH > 0)) return "LCL harmonik akım hedefi pozitif olmalı.";
   if (p.htype === "tis" && 2 * p.Ri < p.dtis) return "Doku silindiri bobin iç çapından büyük olamaz.";
   if (p.htype === "met" && 2 * p.Ri < p.dmet) return "Metal çubuk bobin iç çapından büyük olamaz.";
+  if (p.htype === "mnp" && p.mmode === "model" && (p.mMs <= 0 || p.mK <= 0 || p.md <= 0 || p.msig < 0 || p.msig > 0.8 || p.mshell < 0 || p.meta <= 0)) return "Parçacık değerleri pozitif olmalı (σ 0–0,8 arası).";
   if (p.ilp <= 0 || p.cmnp <= 0 || p.vmnp <= 0 || p.sig <= 0 || p.rhom <= 0 || p.mur < 1) return "Isıtılan malzeme değerleri pozitif olmalı (µr ≥ 1).";
   if (p.k > 1 && p.layers > 1) return "Bölümlü bobin şimdilik yalnızca tek katmanlı sargı için hesaplanır.";
   if (p.k > p.N) return `Bölüm sayısı tur sayısını (${p.N}) geçemez.`;
@@ -1430,6 +1481,7 @@ function run() {
   renderSafety(p, e, cool);
   renderTheory(p, e);
   renderHeat(p, e, roi);
+  renderMnp(p, e);
 
   clearTimeout(sweepTimer); sweepTimer = setTimeout(runSweep, 30);
 }
@@ -1581,6 +1633,93 @@ function renderSafety(p, e, cool) {
   $("safeRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
 }
 
+/* ---------- nanoparticle physics (Rosensweig linear response) ---------- */
+const KB = 1.380649e-23, TAU0 = 1e-9;
+const MNP_MAT = {
+  fe3o4: { n: "Manyetit Fe₃O₄", Ms: 446e3, K: 23e3, rho: 5180 },
+  fe2o3: { n: "Maghemit γ-Fe₂O₃", Ms: 414e3, K: 4.7e3, rho: 4600 },
+  cofe: { n: "Kobalt ferrit CoFe₂O₄", Ms: 425e3, K: 180e3, rho: 5290 }
+};
+// Néel and Brown relaxation of one particle of core diameter d (m)
+function relax(p, d) {
+  const kT = KB * (p.mT + 273.15), V = Math.PI / 6 * d ** 3, dH = d + 2 * p.mshell, VH = Math.PI / 6 * dH ** 3;
+  const G = p.mK * V / kT;
+  const tN = G >= 1 ? Math.sqrt(Math.PI) / 2 * TAU0 * Math.exp(G) / Math.sqrt(G) : TAU0 * Math.exp(G);
+  const tB = p.mImm ? Infinity : 3 * p.meta * VH / kT;
+  return { V, VH, G, tN, tB, t: isFinite(tB) ? tN * tB / (tN + tB) : tN, kT };
+}
+// SLP (W/kg of magnetic material) of a monodisperse particle, with Rosensweig's chord-susceptibility correction
+function slpParticle(p, d, Hpk, f) {
+  const r = relax(p, d), wt = 2 * Math.PI * f * r.t, xi = MU0 * p.mMs * Hpk * r.V / r.kT;
+  const chiI = MU0 * p.mMs * p.mMs * r.V / (3 * r.kT);
+  const chi0 = xi > 1e-4 ? chiI * 3 * (1 / Math.tanh(xi) - 1 / xi) / xi : chiI;
+  return { slp: MU0 * Math.PI * chi0 * Hpk * Hpk * f * wt / (1 + wt * wt) / p.mrho, xi, wt, chiI, ...r };
+}
+// mass-weighted average over a log-normal (number) size distribution with median d0
+function slpDist(p, Hpk, f, d0) {
+  if (p.msig < 0.01) return slpParticle(p, d0, Hpk, f).slp;
+  let a = 0, b = 0; const n = 80;
+  for (let i = 0; i < n; i++) {
+    const u = -4 * p.msig + 8 * p.msig * (i + 0.5) / n, d = d0 * Math.exp(u), w = Math.exp(-u * u / (2 * p.msig * p.msig)) * d ** 3;
+    a += w * slpParticle(p, d, Hpk, f).slp; b += w;
+  }
+  return a / b;
+}
+// local exponents a, b of SLP ∝ H^a f^b
+function locExp(p, H, f) {
+  const q = p.mmode === "model" ? (h, ff) => slpDist(p, h, ff, p.md) : (h, ff) => p.ilp * h * h * ff;
+  const P0 = q(H, f);
+  return [Math.log(q(H * 1.05, f) / P0) / Math.log(1.05), Math.log(q(H, f * 1.05) / P0) / Math.log(1.05)].map(x => Math.abs(x) < 5e-3 ? 0 : x);
+}
+function bestSize(p, H, f) {
+  let best = [0, 0];
+  for (let d = 4e-9; d <= 40e-9 + 1e-12; d += 0.25e-9) { const v = slpDist(p, H, f, d); if (v > best[1]) best = [d, v]; }
+  return best;
+}
+function renderMnp(p, e) {
+  const card = $("mnpCard");
+  card.hidden = !(p.htype === "mnp" && p.mmode === "model");
+  if (card.hidden) return;
+  const H = e.Bpk / MU0, f = e.f, one = slpParticle(p, p.md, H, f), avg = slpDist(p, H, f, p.md);
+  const pImm = { ...p, mImm: true }, pMob = { ...p, mImm: false };
+  const mech = one.tN < one.tB ? "Néel (çekirdek içinde dönme)" : "Brown (parçacığın dönmesi)";
+  const lrt = one.xi < 1 ? ["good", "geçerli"] : one.xi < 3 ? ["warn", "sınırda"] : ["crit", "geçersiz, histerezis rejimi"];
+  const wtTxt = one.wt < 0.3 ? "gevşeme hızlı, alan yetişiyor" : one.wt > 3 ? "gevşeme yavaş, alanı izleyemiyor" : "en iyi bölgeye yakın (≈ 1)";
+  $("tbMnp").innerHTML = kv([
+    ["Çekirdek / hidrodinamik çap", `${dec(p.md * 1e9, 3)} / ${dec((p.md + 2 * p.mshell) * 1e9, 3)} nm`, p.msig >= 0.01 ? `log-normal σ = ${dec(p.msig, 2)}` : "tek boyut"],
+    ["Enerji engeli KV/kT", dec(one.G, 3)],
+    ["Néel süresi τ<sub>N</sub>", si(one.tN, "s")],
+    ["Brown süresi τ<sub>B</sub>", isFinite(one.tB) ? si(one.tB, "s") : "∞ (hareketsiz)"],
+    ["Etkin süre / baskın mekanizma", si(one.t, "s"), mech],
+    ["2πfτ", dec(one.wt, 3), wtTxt],
+    ["Alan parametresi ξ = µ₀M<sub>s</sub>VH/kT", `${dec(one.xi, 3)} <span class="pill ${lrt[0]}">${lrt[1]}</span>`, "doğrusal yanıt için ξ ≲ 1"],
+    ["SLP (dağılımla)", si(avg, "W/kg"), `tek boyut: ${si(one.slp, "W/kg")}`],
+    ["Eşdeğer ILP", `${dec(avg / (H * H * f) * 1e9, 3)} nH·m²/kg`]
+  ]);
+  // materials at their optimum size, mobile and immobilized
+  const rows = Object.entries(MNP_MAT).map(([k, m]) => {
+    const q = { ...p, mMs: m.Ms, mK: m.K, mrho: m.rho };
+    const bm = bestSize({ ...q, mImm: false }, H, f), bi = bestSize({ ...q, mImm: true }, H, f);
+    return `<tr><td class="k">${m.n}</td><td class="v">${dec(bm[0] * 1e9, 3)} nm</td><td class="v">${si(bm[1], "W/kg")}</td><td class="v">${dec(bi[0] * 1e9, 3)} nm</td><td class="v">${si(bi[1], "W/kg")}</td></tr>`;
+  });
+  $("tbMat").innerHTML = `<thead><tr><th style="text-align:left">Malzeme</th><th style="text-align:right">en iyi çap<br>sıvıda</th><th style="text-align:right">SLP</th><th style="text-align:right">en iyi çap<br>hareketsiz</th><th style="text-align:right">SLP</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+  $("matNote").textContent = `Kitap değerleri (K: manyetit 23, maghemit 4,7, kobalt ferrit 180 kJ/m³); gerçek parçacıklarda yüzey anizotropisi K’yı değiştirir. Aynı boyut dağılımı, kabuk ve ortamla, ${si(f, "Hz")} ve ${dec(H / 1000, 3)} kA/m’de.`;
+  // SLP vs core diameter
+  const xs = [], y1 = [], y2 = [];
+  for (let d = 4; d <= 30.001; d += 0.5) { xs.push(d); y1.push(slpDist(pMob, H, f, d * 1e-9)); y2.push(slpDist(pImm, H, f, d * 1e-9)); }
+  lineChart($("chSize"), { x: xs, series: [{ name: "sıvı içinde", y: y1 }, { name: "hareketsiz", y: y2 }], y0: true, mark: [p.md * 1e9, avg], fx: v => dec(v, 3), fy: (v, t) => si(v, "W/kg", t ? 3 : 2), xLabel: "Çekirdek çapı (nm)", yLabel: "SLP (W/kg)", xName: "d", aria: "SLP, çekirdek çapına göre" });
+  const bm = bestSize(pMob, H, f), bi = bestSize(pImm, H, f), sMob = slpDist(pMob, H, f, p.md), sImm = slpDist(pImm, H, f, p.md);
+  const rec = [];
+  rec.push(`Bu malzeme ve koşulda en iyi çekirdek çapı sıvıda ${dec(bm[0] * 1e9, 3)} nm; seçili ${dec(p.md * 1e9, 3)} nm bunun ${ratioTxt(slpDist(p, H, f, p.md) / (p.mImm ? bi[1] : bm[1]))} kadar ısıtıyor. Çapı birkaç nm kaydırmak SLP’yi kat kat değiştirebilir, çünkü Néel süresi hacimle üstel büyür.`);
+  rec.push(`Hücre içine alınıp hareketsiz kalınca SLP ${si(sMob, "W/kg")} → ${si(sImm, "W/kg")} (${ratioTxt(sImm / sMob)}). ${sImm / sMob < 0.5 ? "Bu parçacık ısınmanın çoğunu Brown dönmesinden alıyor; dokuda performansı düşer." : "Bu parçacık çoğunlukla Néel gevşemesiyle ısındığından hareketsiz kalmaktan az etkilenir."}`);
+  if (p.msig >= 0.01) rec.push(`Boyut dağılımı (σ = ${dec(p.msig, 2)}) ile SLP tek boyutun ${ratioTxt(avg / one.slp)} oluyor: ${avg < one.slp ? "optimumdan uzak parçacıklar ısınmaya az katkı verir" : "seçili çap optimumun dışında, dağılımdaki uygun boyutlu parçacıklar ortalamayı yukarı çekiyor"}. Dar dağılımlı sentez, çap seçimi kadar önemlidir.`);
+  const HK = 2 * p.mK / (MU0 * p.mMs);
+  if (one.wt > 100) rec.push(`Bu parçacık bloke: Néel süresi (${si(one.t, "s")}) periyottan çok uzun, mıknatıslanma alanı izleyemez ve doğrusal modelde ısınmaz. Histerezis kaybı için alanın anizotropi alanına (H<sub>K</sub> = 2K/µ₀M<sub>s</sub> = ${dec(HK / 1000, 3)} kA/m) yaklaşması gerekir; uygulanan ${dec(H / 1000, 3)} kA/m ${H > 0.3 * HK ? "buna yakın, gerçek kayıp modelden yüksek olabilir" : "bunun çok altında, histerezis de oluşmaz"}.`);
+  if (one.xi >= 1) rec.push(`ξ = ${dec(one.xi, 2)}: alan, doğrusal yanıt modelinin sınırında ya da ötesinde. Rosensweig’ın kiriş düzeltmesi uygulanıyor, ancak büyük ve bloke parçacıklarda kayıp histerezisle belirlenir (Stoner–Wohlfarth); gerçek SLP farklı olabilir.`);
+  rec.push(`Model ideal, etkileşimsiz parçacıklar içindir ve ölçülen SLP’leri genellikle 2–5 kat fazla tahmin eder (kümelenme, yüzey etkileri, anizotropi dağılımı). Eğilimleri ve çap/frekans seçimini görmek için kullanın; mutlak değer için ölçülmüş ILP moduna geçin.`);
+  $("mnpRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
+}
+
 /* ---------- sample heating ---------- */
 const HF_BREZ = 4.85e8, HF_HERGT = 5e9;
 const HEAT_EXP = { mnp: [2, 1], tis: [2, 2], met: [2, 0.5] };  // P ∝ H^a f^b
@@ -1588,7 +1727,7 @@ const HEAT_EXP = { mnp: [2, 1], tis: [2, 2], met: [2, 0.5] };  // P ∝ H^a f^b
 function heatSample(p, Hpk, f) {
   const w = 2 * Math.PI * f;
   if (p.htype === "mnp") {
-    const slp = p.ilp * Hpk * Hpk * f;                 // W/kg of magnetic material
+    const slp = p.mmode === "model" ? slpDist(p, Hpk, f, p.md) : p.ilp * Hpk * Hpk * f;   // W/kg of magnetic material
     const mass = p.cmnp * p.vmnp;                      // mg/mL = kg/m^3
     return { P: slp * mass, spec: slp, specU: "W/kg", rate: slp * p.cmnp / 4.18e6 };
   }
@@ -1611,7 +1750,7 @@ function heatSample(p, Hpk, f) {
 function renderHeat(p, e, roi) {
   const H = e.Bpk / MU0, hs = heatSample(p, H, e.f), Hf = H * e.f;
   const names = { mnp: "Manyetik nanoparçacık", tis: "Doku / iletken sıvı", met: "Metal parça" };
-  $("sv-heat").textContent = { mnp: "nanoparçacık", tis: "doku", met: "metal" }[p.htype];
+  $("sv-heat").textContent = p.htype === "mnp" ? (p.mmode === "model" ? `${(MNP_MAT[$("mmat").value] || { n: "özel" }).n.split(" ")[0].toLowerCase()} ${dec(p.md * 1e9, 3)} nm` : "nanoparçacık, ILP") : { tis: "doku", met: "metal" }[p.htype];
   $("t-H").textContent = dec(hs.rate * 60, 3) + " K/dk";
   $("t-H2").textContent = si(hs.P, "W") + " numunede";
   const unif = [(1 + roi.mn) ** 2 - 1, (1 + roi.mx) ** 2 - 1];
@@ -1657,13 +1796,13 @@ function renderHeat(p, e, roi) {
   const [ha, hb] = HEAT_EXP[p.htype];
   const er = (a, b) => `<tr><td class="k">${a}</td>${b.map(x => `<td class="v">${x}</td>`).join("")}</tr>`;
   $("tbHexp").innerHTML = `<thead><tr><th style="text-align:left;text-transform:none">P ∝ H<sup>a</sup> f<sup>b</sup></th><th style="text-align:right">a (alan)</th><th style="text-align:right">b (frekans)</th><th style="text-align:right">H·f sabitken f’nin üssü</th></tr></thead><tbody>` +
-    er("Nanoparçacık (ILP)", ["2", "1", "−1"]) + er("Doku girdabı", ["2", "2", "0"]) + er("Metal yüzeyi (δ ≪ R)", ["2", "0,5", "−1,5"]) +
+    er("Nanoparçacık (ILP varsayımı)", ["2", "1", "−1"]) + (p.htype === "mnp" && p.mmode === "model" ? er("<b>Bu parçacık, bu noktada</b>", locExp(p, H, e.f).map(x => dec(x, 2))) : "") + er("Doku girdabı", ["2", "2", "0"]) + er("Metal yüzeyi (δ ≪ R)", ["2", "0,5", "−1,5"]) +
     er("Bobin kaybı (deri etkisi)", ["2", "≈ 0,5", "≈ −1,5"]) + er("Bobin gerilimi", ["1", "1", "0"]) + "</tbody>";
   const rec = [];
   if (p.htype === "mnp") {
-    rec.push(`Nanoparçacık ısınması alanla karesel, frekansla doğrusal artar. Alanı 2 katına çıkarmak ısıtmayı 4 kat, frekansı 2 katına çıkarmak 2 kat artırır; ikisi de bobin gerilimini 2 kat artırır. Gerilim bütçesi sınırlıysa alan, frekanstan daha verimli bir kaldıraçtır.`);
-    rec.push(`H·f sınırı altında çalışırken frekansı düşürüp alanı yükseltin: ısıtma ∝ (Hf)²/f. Örneğin bu H·f ile 100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır. Bedeli: bobin kaybı daha da hızlı artar (∝ f⁻¹·⁵), verim √f ile düşer; düşük frekans daha güçlü sürücü ve soğutma ister. Bobin gerilimi H·f ile orantılı olduğundan değişmez.`);
-    rec.push(`ILP sabit kabulü parçacığın gevşeme süresine bağlıdır. Néel gevşemeli küçük parçacıklarda (2πfτ ≪ 1) frekansın katkısı daha güçlü (∝ f²) olabilir. Ölçülmüş SLP–frekans verisi varsa ILP’yi çalışma frekansındaki değerle girin.`);
+    rec.push(p.mmode === "model" ? `Bu parçacık için ısınma şu an yaklaşık H<sup>${dec(locExp(p, H, e.f)[0], 2)}</sup>·f<sup>${dec(locExp(p, H, e.f)[1], 2)}</sup> ile ölçekleniyor (tablodaki son satır). Frekans üssü gevşeme süresine bağlıdır: 2πfτ ≪ 1 ise ~2, ≫ 1 ise ~0.` : `Nanoparçacık ısınması alanla karesel, frekansla doğrusal artar. Alanı 2 katına çıkarmak ısıtmayı 4 kat, frekansı 2 katına çıkarmak 2 kat artırır; ikisi de bobin gerilimini 2 kat artırır. Gerilim bütçesi sınırlıysa alan, frekanstan daha verimli bir kaldıraçtır.`);
+    rec.push(`H·f sınırı altında çalışırken frekansı düşürüp alanı yükseltin: ısıtma ∝ (Hf)²/f. Örneğin bu H·f ile 100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır. Bedeli: bobin kaybı daha da hızlı artar (∝ f⁻¹·⁵), verim √f ile düşer; düşük frekans daha güçlü sürücü ve soğutma ister. Bobin gerilimi H·f ile orantılı olduğundan değişmez.`.replace("100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır", `100 kHz’te ısıtma, 500 kHz’tekinin ${dec(a2[0] / a2[a2.length - 1], 2)} katıdır`));
+    if (p.mmode !== "model") rec.push(`ILP sabit kabulü parçacığın gevşeme süresine bağlıdır. Néel gevşemeli küçük parçacıklarda (2πfτ ≪ 1) frekansın katkısı daha güçlü (∝ f²) olabilir. Ölçülmüş SLP–frekans verisi varsa ILP’yi çalışma frekansındaki değerle girin.`);
   } else if (p.htype === "tis") {
     rec.push(`Doku girdap ısınması hem alanla hem frekansla karesel artar (∝ f²H²); H·f sabitken frekanstan bağımsızdır. Bu yüzden canlıda sınır H·f çarpımı üzerine konur. Silindir yarıçapının karesiyle de büyür: büyük kesitli bölgeler daha çok ısınır.`);
   } else {
@@ -1970,6 +2109,18 @@ function selfTests() {
     const m = heatSample({ htype: "mnp", ilp: 1e-9, cmnp: 5, vmnp: 1e-6 }, 4000, 2.5e5);
     add("Isıtma", "Nanoparçacık SLP", "ILP·H²·f, 1 nH·m²/kg, 4 kA/m, 250 kHz", 4000, m.spec, 1e-12, v => si(v, "W/kg", 5));
   }
+  // nanoparticle model checks
+  {
+    const pp = { mMs: 446e3, mK: 23e3, mrho: 5180, mT: 37, mshell: 2e-9, meta: 0.69e-3, mImm: false, msig: 0 };
+    const r = relax(pp, 14e-9), kT = KB * 310.15, VH = Math.PI / 6 * (18e-9) ** 3;
+    add("Nanoparçacık", "Brown süresi", "τ_B = 3ηV_H/kT, 18 nm, su 37 °C", 3 * 0.69e-3 * VH / kT, r.tB, 1e-12, v => si(v, "s", 5));
+    // at 2πfτ = 1 the loss factor ωτ/(1+ω²τ²) is exactly 1/2 of its asymptote ratio: SLP = µ0 π χ0 H² f / 2 / ρ
+    const fpk = 1 / (2 * Math.PI * r.t), H = 1, sp = slpParticle(pp, 14e-9, H, fpk);
+    add("Nanoparçacık", "Rosensweig, 2πfτ = 1", "SLP = µ₀πχ₀H²f/(2ρ), küçük alan", MU0 * Math.PI * sp.chiI * H * H * fpk / 2 / pp.mrho, sp.slp, 1e-6, v => si(v, "W/kg", 5));
+    const lo = locExp({ ...pp, mmode: "model", md: 6e-9 }, H, 1e3), hi = locExp({ ...pp, mmode: "model", md: 20e-9, mImm: true }, H, 5e5);
+    add("Nanoparçacık", "Hızlı gevşemede P ∝ f²", "2πfτ ≪ 1: frekans üssü → 2", 2, lo[1], 2e-2, v => dec(v, 4));
+    add("Nanoparçacık", "Yavaş gevşemede P ∝ f⁰", "2πfτ ≫ 1: frekans üssü → 0", 1, 1 + hi[1], 2e-2, v => dec(v - 1, 4));
+  }
   // 5. resistance
   const pr = { type: "solid", dS: 2e-3, layers: 1, T: 20, len: 0.15, N: 15 }, gr = { lw: 4, pitch: 0.01, d: 2e-3, Nt: 15, segs: [{ n: 15, pitch: 0.01 }] };
   add("Direnç", "Düşük frekansta R → Rdc", "dolu tel, f = 1 Hz, ρℓ/A", 1.72e-8 * 4 / (Math.PI * 1e-6), resistance(pr, gr, 1).Rac, 1e-4, v => si(v, "Ω", 5));
@@ -2029,6 +2180,22 @@ $("k").addEventListener("input", syncCool);
 $("cool").addEventListener("change", () => { syncCool(); schedule(); });
 function syncHeat() { const t = $("htype").value; ["mnp", "tis", "met"].forEach(k => { const g = $("g-" + k); g.hidden = k !== t; g.style.display = k === t ? "flex" : ""; }); }
 $("htype").addEventListener("change", () => { syncHeat(); schedule(); }); syncHeat();
+function setMmode(m) {
+  mmode = m;
+  $("mmModel").setAttribute("aria-pressed", String(m === "model")); $("mmIlp").setAttribute("aria-pressed", String(m !== "model"));
+  $("g-mmodel").hidden = m !== "model"; $("g-mmodel").style.display = m === "model" ? "flex" : "";
+  $("g-milp").hidden = m === "model"; $("g-milp").style.display = m === "model" ? "" : "flex";
+  schedule();
+}
+$("mmModel").addEventListener("click", () => setMmode("model"));
+$("mmIlp").addEventListener("click", () => setMmode("ilp"));
+$("mmat").addEventListener("change", () => {
+  const m = MNP_MAT[$("mmat").value];
+  if (m) { $("mMs").value = m.Ms / 1e3; $("mK").value = m.K / 1e3; }
+  schedule();
+});
+["mMs", "mK"].forEach(id => $(id).addEventListener("input", () => { const m = MNP_MAT[$("mmat").value]; if (m && (+$("mMs").value !== m.Ms / 1e3 || +$("mK").value !== m.K / 1e3)) $("mmat").value = "custom"; }));
+$("mImm").addEventListener("change", schedule);
 function syncML() { const on = parseInt($("layers").value) > 1; $("g-ml").hidden = !on; $("g-ml").style.display = on ? "flex" : ""; }
 $("layers").addEventListener("input", syncML); syncML();
 ["wind", "bridge"].forEach(id => $(id).addEventListener("change", schedule));
