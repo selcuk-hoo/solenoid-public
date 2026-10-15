@@ -18,7 +18,8 @@ yola çıkarak hesaplar:
 - Bölümlü bobin (dağıtılmış kondansatör), bölümlü su soğutması
 - LCL seri şok tasarımı (harmonik akım hedefiyle)
 - Sekmeli arayüz, katlanabilir girdi grupları
-- Teori sekmesi: formüller, canlı değerler, model–teori ölçeklenme karşılaştırması
+- Numune ısıtma: nanoparçacık (ILP), doku girdabı, metal yüzey ısıtması; H·f güvenlik sınırları
+- Teori sekmesi: LCL devre şeması, formüller, canlı değerler, model–teori ölçeklenme karşılaştırması
 - Güvenlik paneli: IEC 61010-1 gerilim sınırı, ICNIRP alan maruziyeti mesafeleri
 - Uç sıklaştırma (uçlarda daha küçük adım) ve en iyi ayar araması
 - Analitik uç durumlarla doğrulama testleri

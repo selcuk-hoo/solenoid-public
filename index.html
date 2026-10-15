@@ -146,6 +146,7 @@ table.kv td.v .nw { white-space: nowrap; }
 #tbTank td.v .nw { white-space: normal; }
 #tbTank td.k { min-width: 7em; }
 #tbTank th { white-space: normal; }
+#tbHexp th { white-space: normal; } #tbHexp td.k { min-width: 8em; }
 table.kv tr:last-child td { border-bottom: 0; }
 .figure { display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; }
 .figure .cap { font-size: 13px; color: var(--ink-2); }
@@ -192,6 +193,10 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
 .eq { font: italic 16px/1.6 "Cambria Math", "STIX Two Math", "Latin Modern Math", Cambria, "Times New Roman", serif; color: var(--ink); background: var(--bg); border-left: 2px solid var(--copper); padding: 8px 12px; border-radius: 0 4px 4px 0; overflow-x: auto; white-space: nowrap; }
 @media (max-width: 700px) { .eq { white-space: normal; } }
 .live { color: var(--copper); font-family: var(--f-mono); font-size: .92em; font-style: normal; white-space: nowrap; }
+.schem { margin: 4px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.schem svg { width: 100%; min-width: 560px; height: auto; display: block; color: var(--ink); }
+.schem .hl { stroke: var(--copper); } .schem .hlf { fill: var(--copper); } .schem .hlt { fill: var(--copper); }
+.schem figcaption { font-size: 13px; color: var(--ink-2); max-width: 82ch; }
 .notes { font-size: 13.5px; color: var(--ink-2); margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-width: 95ch; }
 .rec { font-size: 14px; color: var(--ink-2); margin: 0; max-width: 75ch; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -295,6 +300,36 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
       </fieldset>
       </details>
 
+      <details class="grp" open>
+        <summary><span>Isıtılan malzeme</span><span class="sumval" id="sv-heat"></span></summary>
+        <fieldset>
+        <div class="row"><label for="htype">Tür</label>
+          <select id="htype">
+            <option value="mnp" selected>Manyetik nanoparçacık</option>
+            <option value="tis">Doku / iletken sıvı</option>
+            <option value="met">Metal parça</option>
+          </select>
+        </div>
+        <div id="g-mnp" style="display:flex;flex-direction:column;gap:10px">
+          <div class="row"><label for="ilp">ILP <small>nH·m²/kg</small></label><input id="ilp" type="number" value="1.5" min="0.01" step="0.1"></div>
+          <div class="row"><label for="cmnp">Derişim <small>mg/mL</small></label><input id="cmnp" type="number" value="5" min="0.01" step="0.5"></div>
+          <div class="row"><label for="vmnp">Numune hacmi <small>mL</small></label><input id="vmnp" type="number" value="1" min="0.01" step="0.5"></div>
+          <p class="hint">ILP = SLP/(H²f): ölçülmüş içsel kayıp gücü. Ticari ferroakışkanlarda tipik 0,2–3 nH·m²/kg.</p>
+        </div>
+        <div id="g-tis" hidden style="flex-direction:column;gap:10px">
+          <div class="row"><label for="sig">İletkenlik σ <small>S/m</small></label><input id="sig" type="number" value="0.6" min="0.001" step="0.1"></div>
+          <div class="row"><label for="dtis">Silindir çapı <small>mm</small></label><input id="dtis" type="number" value="40" min="1" step="5"></div>
+          <div class="row"><label for="ltis">Uzunluk <small>mm</small></label><input id="ltis" type="number" value="80" min="1" step="5"></div>
+        </div>
+        <div id="g-met" hidden style="flex-direction:column;gap:10px">
+          <div class="row"><label for="rhom">Özdirenç <small>µΩ·cm</small></label><input id="rhom" type="number" value="72" min="1" step="1"></div>
+          <div class="row"><label for="mur">Bağıl geçirgenlik µ<sub>r</sub></label><input id="mur" type="number" value="1" min="1" step="1"></div>
+          <div class="row"><label for="dmet">Çubuk çapı <small>mm</small></label><input id="dmet" type="number" value="20" min="0.5" step="1"></div>
+          <div class="row"><label for="lmet">Uzunluk <small>mm</small></label><input id="lmet" type="number" value="50" min="1" step="5"></div>
+          <p class="hint">Varsayılan: paslanmaz çelik 304 (72 µΩ·cm, µ<sub>r</sub> ≈ 1). Bakır 1,7; alüminyum 2,7; karbon çeliği ~15 (µ<sub>r</sub> ≫ 1, Curie noktasının altında).</p>
+        </div>
+        </fieldset>
+      </details>
       <details class="grp">
         <summary><span>Değerlendirme bölgesi</span><span class="sumval" id="sv-roi"></span></summary>
         <fieldset>
@@ -355,13 +390,14 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <div class="tile" data-tab="guv"><span class="lab" id="t-Vlab">Uç gerilimi</span><span class="val" id="t-V">–</span><span class="sub" id="t-V2">–</span></div>
         <div class="tile" data-tab="elek"><span class="lab">Empedans</span><span class="val" id="t-Z">–</span><span class="sub" id="t-Z2">–</span></div>
         <div class="tile" data-tab="elek"><span class="lab">Kayıp güç</span><span class="val" id="t-P">–</span><span class="sub" id="t-P2">–</span></div>
-        <div class="tile" data-tab="elek"><span class="lab">Endüktans</span><span class="val" id="t-L">–</span><span class="sub" id="t-L2">–</span></div>
+        <div class="tile" data-tab="isi"><span class="lab">Numune ısınması</span><span class="val" id="t-H">–</span><span class="sub" id="t-H2">–</span></div>
         <div class="tile" data-tab="elek"><span class="lab">AC direnç</span><span class="val" id="t-R">–</span><span class="sub" id="t-R2">–</span></div>
         <div class="tile" data-tab="alan"><span class="lab">Bölgede düzgünlük</span><span class="val" id="t-U">–</span><span class="sub" id="t-U2">–</span></div>
         <div class="tile" data-tab="sog"><span class="lab">Soğutma</span><span class="val txt" id="t-C">–</span><span class="sub" id="t-C2">–</span></div>
       </section>
       <nav class="tabs" role="tablist" aria-label="Sonuç sekmeleri">
         <button type="button" role="tab" data-tab="alan">Alan</button>
+        <button type="button" role="tab" data-tab="isi">Isıtma <i class="dot" id="dot-isi"></i></button>
         <button type="button" role="tab" data-tab="elek">Elektrik</button>
         <button type="button" role="tab" data-tab="sog">Soğutma <i class="dot" id="dot-sog"></i></button>
         <button type="button" role="tab" data-tab="sur">Sürücü <i class="dot" id="dot-sur"></i></button>
@@ -396,6 +432,32 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
             <div class="legend" id="radLegend"></div>
           </div>
         </div>
+      </section>
+      </div>
+
+      <div class="tabpanel" id="tab-isi" role="tabpanel" aria-label="Isıtma">
+      <section class="card">
+        <div class="card-head">
+          <h2>Numune ısıtma</h2>
+          <span id="heatPill" class="pill good">–</span>
+        </div>
+        <p class="rec">Numune bobinin merkezinde, alan şiddeti merkez değerinde kabul edilir. Isınma hızı, ısı kaybı olmayan başlangıç hızıdır (adyabatik).</p>
+        <div class="grid2">
+          <div class="figure"><h3>Isıtma gücü</h3><table class="kv" id="tbHeat"></table></div>
+          <div class="figure"><h3>Alan ve frekans sınırı</h3><table class="kv" id="tbHf"></table></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head">
+          <h2>Alan mı, frekans mı?</h2>
+          <p>Isınma alanın karesiyle artar, frekansla artışı ise malzemeye bağlıdır. Mavi: alan şiddeti sabit, frekans değişir. Turuncu: H·f çarpımı sabit (güvenlik sınırı gibi), frekans artarken alan düşer.</p>
+        </div>
+        <div class="figure"><h3>Numunedeki ısıtma gücü</h3><div class="chartbox" id="chHeat"></div>
+          <div class="legend"><span><i class="ln" style="background:var(--series-1)"></i>H sabit</span><span><i class="ln" style="background:var(--series-2)"></i>H·f sabit</span></div></div>
+        <div class="figure"><h3>Verim: numune gücü / bobin kaybı</h3><div class="chartbox" id="chEff"></div>
+          <div class="cap">Numune gücü de bobin kaybı da H² ile arttığından verim alan şiddetinden bağımsızdır; yalnızca frekansa ve malzemeye bağlıdır.</div></div>
+        <div class="tablewrap"><table class="kv" id="tbHexp"></table></div>
+        <ul class="notes" id="heatRec"></ul>
       </section>
       </div>
 
@@ -550,6 +612,55 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <p>Bobinin reaktansını bir kondansatör dengeler; böylece kaynak yalnızca kayıp gücü sağlar. Rezonansta:</p>
           <div class="eq">seri tank: Z = R <span class="sep"></span> paralel tank: R<sub>p</sub> = (ωL)²/R = Q² R <span class="sep"></span> LCL (X₁ = X<sub>C</sub> = X): Z<sub>giriş</sub> = X²/R, &nbsp; I<sub>bobin</sub> = V / (jX)</div>
           <p>Bu tasarımda R = <span class="live" id="th-R"></span>, R<sub>p</sub> = <span class="live" id="th-Rp"></span>. Seri tank çok küçük, paralel tank çok büyük bir direnç gösterir; trafo bunu köprünün istediği değere eşler. Eşit reaktanslı LCL bobin akımını yükten bağımsız yapar (akım kaynağı). Ancak köprünün kare dalgası V<sub>h</sub> = V₁/h genlikli harmonikler içerir. Q yüksekken temel akım küçük kaldığından harmonikler baskın olur; bu yüzden şok daha büyük seçilir (Sürücü sekmesi).</p>
+                  <figure class="schem">
+            <div class="tablewrap">
+            <svg viewBox="0 0 780 270" role="img" aria-label="LCL devresi: köprü, trafo, seri şok L1, paralel kondansatör ve bobin. Büyük bobin akımı yalnızca kondansatör ile bobin arasında döner; trafo ve şoktan küçük I1 akımı geçer.">
+              <defs>
+                <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+                <marker id="arrc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="hlf"/></marker>
+              </defs>
+              <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <!-- bridge -->
+                <rect x="20" y="95" width="100" height="90" rx="4"/>
+                <path d="M120 110 H176 V80 M120 170 H176 V200"/>
+                <!-- transformer: primary (bulges right), core, secondary (bulges left) -->
+                <path d="M176 80 v20 a10 10 0 0 1 0 20 a10 10 0 0 1 0 20 a10 10 0 0 1 0 20 a10 10 0 0 1 0 20 a10 10 0 0 1 0 20 V200"/>
+                <path d="M196 92 V188 M201 92 V188"/>
+                <path d="M222 80 v20 a10 10 0 0 0 0 20 a10 10 0 0 0 0 20 a10 10 0 0 0 0 20 a10 10 0 0 0 0 20 a10 10 0 0 0 0 20 V200"/>
+                <!-- rails -->
+                <path d="M222 80 H290 M410 80 H660 M222 200 H660"/>
+                <!-- shunt capacitor -->
+                <path d="M480 80 V132 M462 132 H498 M462 146 H498 M480 146 V200"/>
+                <!-- coil: inductor + resistor -->
+                <path d="M660 80 V92 a10 10 0 0 1 0 20 a10 10 0 0 1 0 20 a10 10 0 0 1 0 20 V158 l8 4 l-16 6 l16 6 l-16 6 l8 4 V200"/>
+              </g>
+              <!-- series choke (the element being sized) -->
+              <path d="M290 80 a15 15 0 0 1 30 0 a15 15 0 0 1 30 0 a15 15 0 0 1 30 0 a15 15 0 0 1 30 0" fill="none" class="hl" stroke-width="2.4" stroke-linecap="round"/>
+              <circle cx="480" cy="80" r="3.5" fill="currentColor"/><circle cx="480" cy="200" r="3.5" fill="currentColor"/>
+              <circle cx="660" cy="80" r="3" fill="currentColor"/>
+              <!-- current arrows -->
+              <path d="M300 40 H400" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+              <path d="M510 112 H600 Q630 112 630 140 Q630 168 600 168 H520" fill="none" class="hl" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrc)"/>
+              <g fill="currentColor" font-size="12.5" font-family="var(--f-body)">
+                <text x="70" y="136" text-anchor="middle" font-weight="600">Köprü</text>
+                <text x="70" y="154" text-anchor="middle" font-size="11.5" opacity=".8">V₁ (kare dalga)</text>
+                <text x="199" y="226" text-anchor="middle">trafo</text>
+                <text x="199" y="244" text-anchor="middle" font-family="var(--f-mono)" font-size="11.5" id="sch-a">1 : a</text>
+                <text x="350" y="32" text-anchor="middle">I₁ (küçük, <tspan id="sch-I1">–</tspan>)</text>
+                <text x="350" y="112" text-anchor="middle" class="hlt" font-weight="600">L₁ seri şok</text>
+                <text x="350" y="128" text-anchor="middle" class="hlt" font-family="var(--f-mono)" font-size="11.5" id="sch-L1">–</text>
+                <text x="452" y="137" text-anchor="end">C</text>
+                <text x="452" y="153" text-anchor="end" font-family="var(--f-mono)" font-size="11.5" id="sch-C">–</text>
+                <text x="572" y="104" text-anchor="middle" class="hlt">I<tspan font-size="9.5" dy="3">bobin</tspan><tspan dy="-3"> (<tspan id="sch-IL">–</tspan>)</tspan></text>
+                <text x="572" y="190" text-anchor="middle" class="hlt" font-size="11.5">tank içinde döner</text>
+                <text x="684" y="118" font-weight="600">Bobin</text>
+                <text x="684" y="134" font-family="var(--f-mono)" font-size="11.5" id="sch-L">L</text>
+                <text x="684" y="176" font-family="var(--f-mono)" font-size="11.5" id="sch-R">R</text>
+              </g>
+            </svg>
+            </div>
+            <figcaption>LCL bağlantısı. Büyük bobin akımı yalnızca C ile bobin arasında döner; trafo ve şok yalnızca kayıp gücü taşıyan küçük I₁ akımını görür. L₁, köprünün kare dalgasındaki harmoniklerin bu tanka akmasını sınırlar. Değerler sizin tasarımınızdan.</figcaption>
+          </figure>
         </article>
 
         <article>
@@ -557,6 +668,15 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <p>Tasarımın tek bir parametresi değiştirilip model yeniden çalıştırılır. Çıkan oranlar üs olarak (y ∝ x<sup>n</sup>) basit teorinin beklediği değerlerle karşılaştırılır. Uç sıklaştırma ve bölümleme bu karşılaştırmada kapalıdır.</p>
           <div class="tablewrap"><table class="kv" id="tbScale"></table></div>
           <p class="hint" id="scaleNote"></p>
+        </article>
+
+        <article>
+          <h3>8. Isıtma: alanın ve frekansın katkısı</h3>
+          <p>Manyetik nanoparçacıklarda kayıp, mıknatıslanmanın alanın gerisinde kalmasından doğar. Doğrusal yanıt kuramına (Rosensweig) göre:</p>
+          <div class="eq">P = µ₀ π χ₀ H² f · 2πfτ / (1 + (2πfτ)²) <span class="sep"></span> SLP = ILP · H² f</div>
+          <p>Alan her zaman karesiyle girer. Frekansın katkısı ise parçacığın gevşeme süresi τ’ya bağlıdır: 2πfτ ≪ 1 iken P ∝ f², 2πfτ ≫ 1 iken P frekanstan bağımsızlaşır. Ölçülmüş ILP ile yapılan hesap bu aradaki P ∝ f davranışını varsayar. İletken doku ve sıvılarda ısıyı girdap akımları üretir; metal parçada ise akım derinliği küçük olduğu için yüzey ısınır:</p>
+          <div class="eq">doku: P<sub>v</sub> = σ ω² B² R² / 16 <span class="sep"></span> metal (δ ≪ R): P/A = ½ H² √(π f µ₀ µ<sub>r</sub> ρ)</div>
+          <p>Canlı dokuda girdap ısınması istenmeyen etkidir ve f²H² ile büyür. Bu yüzden hipertermide H·f çarpımı sınırlanır (Atkinson–Brezovich: 4,85·10⁸ A/(m·s); Hergt–Dutz: 5·10⁹ A/(m·s), küçük vücut bölgeleri için). H·f sabitken nanoparçacık ısınması ∝ H²f = (Hf)²/f olur: düşük frekans ve yüksek alan daha çok ısıtır. Bu tasarımda H·f = <span class="live" id="th-Hf"></span>.</p>
         </article>
       </section>
       <section class="card">
@@ -612,6 +732,13 @@ function si(x, unit, sig = 3) {
   const a = Math.abs(x);
   for (const [s, p] of pre) if (a >= s * 0.9995) return dec(x / s, sig) + " " + p + unit;
   return dec(x / 1e-12, sig) + " p" + unit;
+}
+// 9,95·10⁸ style
+function sci(x, sig = 3) {
+  if (!isFinite(x) || x === 0) return dec(x, sig);
+  const e = Math.floor(Math.log10(Math.abs(x))), m = x / Math.pow(10, e);
+  const sup = String(e).replace(/-/g, "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+  return `${dec(m, sig)}·10${sup}`;
 }
 const pct = (x, sig = 2) => isFinite(x) ? dec(x * 100, sig) + " %" : "–";
 
@@ -1082,6 +1209,7 @@ function readParams() {
     OD: v("OD") / 1000, wall: v("wall") / 1000, dS: v("dS") / 1000,
     ds: v("ds") / 1000, ns: Math.round(v("ns")), dL: v("dL") / 1000,
     ec, ne: Math.round(v("ne")), ke: v("ke"),
+    htype: $("htype").value, ilp: v("ilp") * 1e-9, cmnp: v("cmnp"), vmnp: v("vmnp") * 1e-6, sig: v("sig"), dtis: v("dtis") / 1000, ltis: v("ltis") / 1000, rhom: v("rhom") * 1e-8, mur: v("mur"), dmet: v("dmet") / 1000, lmet: v("lmet") / 1000,
     wind: $("wind").value, tins: v("tins") / 1000, epsr: v("epsr"), Vdc: v("Vdc"), bridge: $("bridge").value, lclH: v("lclH") / 100,
     k: Math.max(1, Math.round(v("k"))), wpath: $("wpath").value, wres: parseFloat($("wtype").value), hoseL: v("hoseL") / 1000,
     roiD: v("roiD") / 1000, roiL: v("roiL") / 1000, dTw: v("dTw"), dTmax: v("dTmax"), cool: $("cool").value
@@ -1105,6 +1233,9 @@ function validate(p) {
   if (p.layers > 1 && (p.tins < 0 || p.epsr < 1)) return "Yalıtım kalınlığı negatif, ε_r 1’den küçük olamaz.";
   if (p.Vdc <= 0) return "DC bara gerilimi pozitif olmalı.";
   if (!(p.lclH > 0)) return "LCL harmonik akım hedefi pozitif olmalı.";
+  if (p.htype === "tis" && 2 * p.Ri < p.dtis) return "Doku silindiri bobin iç çapından büyük olamaz.";
+  if (p.htype === "met" && 2 * p.Ri < p.dmet) return "Metal çubuk bobin iç çapından büyük olamaz.";
+  if (p.ilp <= 0 || p.cmnp <= 0 || p.vmnp <= 0 || p.sig <= 0 || p.rhom <= 0 || p.mur < 1) return "Isıtılan malzeme değerleri pozitif olmalı (µr ≥ 1).";
   if (p.k > 1 && p.layers > 1) return "Bölümlü bobin şimdilik yalnızca tek katmanlı sargı için hesaplanır.";
   if (p.k > p.N) return `Bölüm sayısı tur sayısını (${p.N}) geçemez.`;
   if (p.hoseL <= 0) return "Hortum boyu pozitif olmalı.";
@@ -1153,8 +1284,6 @@ function run() {
   $("t-Z2").textContent = `${si(e.Rac, "Ω")} + j${si(e.XL, "Ω")}`;
   $("t-P").textContent = si(e.P, "W");
   $("t-P2").textContent = "reaktif " + si(e.S, "VAr");
-  $("t-L").textContent = si(g.L, "H");
-  $("t-L2").textContent = "Wheeler " + si(e.wheeler, "H");
   $("t-R").textContent = si(e.Rac, "Ω");
   $("t-R2").textContent = `Q = ${dec(e.Q, 3)} · Rac/Rdc ${dec(e.FR, 3)}`;
 
@@ -1300,6 +1429,7 @@ function run() {
   renderHW(p, e);
   renderSafety(p, e, cool);
   renderTheory(p, e);
+  renderHeat(p, e, roi);
 
   clearTimeout(sweepTimer); sweepTimer = setTimeout(runSweep, 30);
 }
@@ -1451,6 +1581,98 @@ function renderSafety(p, e, cool) {
   $("safeRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
 }
 
+/* ---------- sample heating ---------- */
+const HF_BREZ = 4.85e8, HF_HERGT = 5e9;
+const HEAT_EXP = { mnp: [2, 1], tis: [2, 2], met: [2, 0.5] };  // P ∝ H^a f^b
+// heating of the sample for peak field Hpk (A/m) at frequency f
+function heatSample(p, Hpk, f) {
+  const w = 2 * Math.PI * f;
+  if (p.htype === "mnp") {
+    const slp = p.ilp * Hpk * Hpk * f;                 // W/kg of magnetic material
+    const mass = p.cmnp * p.vmnp;                      // mg/mL = kg/m^3
+    return { P: slp * mass, spec: slp, specU: "W/kg", rate: slp * p.cmnp / 4.18e6 };
+  }
+  if (p.htype === "tis") {
+    const R = p.dtis / 2, B = MU0 * Hpk;
+    const pv = p.sig * w * w * B * B * R * R / 16;    // W/m^3, time and cross-section average
+    return { P: pv * Math.PI * R * R * p.ltis, spec: pv, specU: "W/m³", rate: pv / 3.8e6 };
+  }
+  const R = p.dmet / 2, vol = Math.PI * R * R * p.lmet, delta = Math.sqrt(p.rhom / (Math.PI * f * MU0 * p.mur));
+  let P, regime;
+  if (R / delta >= 2) {                                // surface heating, skin depth << radius
+    const Rs = p.rhom / delta;
+    P = 0.5 * Hpk * Hpk * Rs * Math.PI * p.dmet * p.lmet; regime = "yüzey";
+  } else {                                             // thin rod: volumetric eddy loss
+    const B = MU0 * p.mur * Hpk;
+    P = (1 / p.rhom) * w * w * B * B * R * R / 16 * vol; regime = "hacim";
+  }
+  return { P, spec: P / (vol * 7900), specU: "W/kg", rate: P / (vol * 3.9e6), delta, regime };
+}
+function renderHeat(p, e, roi) {
+  const H = e.Bpk / MU0, hs = heatSample(p, H, e.f), Hf = H * e.f;
+  const names = { mnp: "Manyetik nanoparçacık", tis: "Doku / iletken sıvı", met: "Metal parça" };
+  $("sv-heat").textContent = { mnp: "nanoparçacık", tis: "doku", met: "metal" }[p.htype];
+  $("t-H").textContent = dec(hs.rate * 60, 3) + " K/dk";
+  $("t-H2").textContent = si(hs.P, "W") + " numunede";
+  const unif = [(1 + roi.mn) ** 2 - 1, (1 + roi.mx) ** 2 - 1];
+  const rows = [
+    ["Malzeme", names[p.htype]],
+    ["Alan (tepe)", `${dec(H / 1000, 3)} kA/m · ${dec(e.Bpk * 1000, 3)} mT`, si(e.f, "Hz")],
+    ["Numunedeki güç", si(hs.P, "W")],
+    [p.htype === "tis" ? "Hacimsel güç" : p.htype === "mnp" ? "SLP (özgül kayıp)" : "Özgül güç", si(hs.spec, hs.specU)],
+    ["Başlangıç ısınma hızı", `${dec(hs.rate * 60, 3)} K/dk`, p.htype === "mnp" ? "su içinde, ısı kaybı yok" : "ısı kaybı yok"],
+    ["Bölgede ısıtma düzgünlüğü", `${pct(unif[0], 2)} … +${pct(unif[1], 2)}`, "güç ∝ H², alan sapmasının ~2 katı"]
+  ];
+  if (p.htype === "met") rows.push(["Akım derinliği / yarıçap", `${si(hs.delta, "m")} / ${si(p.dmet / 2, "m")}`, hs.regime === "yüzey" ? "yüzey ısıtması (δ ≪ R)" : "ince çubuk, hacimsel girdap"]);
+  rows.push(["Sürücünün vermesi gereken", si(e.P + hs.P, "W"), `bobin ${si(e.P, "W")} + numune`]);
+  $("tbHeat").innerHTML = kv(rows);
+  const lvl = Hf > HF_HERGT ? "crit" : Hf > HF_BREZ ? "warn" : "good";
+  const pl = (ok, t) => `<span class="pill ${ok ? "good" : "crit"}">${t}</span>`;
+  $("tbHf").innerHTML = kv([
+    ["H·f", `${sci(Hf)} A/(m·s)`],
+    ["Atkinson–Brezovich (4,85·10⁸)", `${dec(Hf / HF_BREZ, 3)} × ${pl(Hf <= HF_BREZ, Hf <= HF_BREZ ? "altında" : "üstünde")}`, "geniş vücut bölgesi, insanda"],
+    ["Hergt–Dutz (5·10⁹)", `${dec(Hf / HF_HERGT, 3)} × ${pl(Hf <= HF_HERGT, Hf <= HF_HERGT ? "altında" : "üstünde")}`, "küçük bölge"],
+    ["Sınırda izin verilen alan", `${dec(HF_BREZ / e.f / 1000, 3)} / ${dec(HF_HERGT / e.f / 1000, 3)} kA/m`, `${si(e.f, "Hz")} için`],
+    ["Sınırda izin verilen frekans", `${si(HF_BREZ / H, "Hz")} / ${si(HF_HERGT / H, "Hz")}`, "bu alan için"]
+  ]);
+  const vivo = p.htype !== "met";
+  $("dot-isi").className = "dot " + (vivo ? lvl : "");
+  $("heatPill").className = "pill " + (vivo ? lvl : "good");
+  $("heatPill").textContent = vivo ? (lvl === "good" ? "H·f sınırların altında" : lvl === "warn" ? "Brezovich sınırı üstünde" : "Hergt sınırı üstünde") : `${dec(hs.rate * 60, 3)} K/dk`;
+
+  // field vs frequency: H constant vs H·f constant
+  const xs = [], a1 = [], a2 = [], b1 = [];
+  const p0 = { ...p, k: 1 };
+  for (let f = 100e3; f <= 500e3 + 1; f += 10e3) {
+    xs.push(f / 1000);
+    const H2 = Hf / f;
+    const s1 = heatSample(p, H, f).P, s2 = heatSample(p, H2, f).P;
+    a1.push(s1); a2.push(s2);
+    b1.push(s1 / evaluate(p0, f).P);
+  }
+  const fy = (v, t) => si(v, "W", t ? 3 : 2);
+  lineChart($("chHeat"), { x: xs, series: [{ name: "H sabit", y: a1 }, { name: "H·f sabit", y: a2 }], y0: true, mark: [e.f / 1000, hs.P], fx: v => dec(v, 3), fy, xLabel: "Frekans (kHz)", yLabel: "Numune gücü (W)", xName: "f", aria: "Numune ısıtma gücü, frekansa göre" });
+  lineChart($("chEff"), { x: xs, series: [{ name: "Verim", y: b1 }], y0: true, mark: [e.f / 1000, hs.P / e.P], fx: v => dec(v, 3), fy: (v, t) => t ? pct(v, 3) : pct(v, 2), xLabel: "Frekans (kHz)", yLabel: "Numune / bobin kaybı", xName: "f", aria: "Isıtma verimi, frekansa göre" });
+
+  const [ha, hb] = HEAT_EXP[p.htype];
+  const er = (a, b) => `<tr><td class="k">${a}</td>${b.map(x => `<td class="v">${x}</td>`).join("")}</tr>`;
+  $("tbHexp").innerHTML = `<thead><tr><th style="text-align:left;text-transform:none">P ∝ H<sup>a</sup> f<sup>b</sup></th><th style="text-align:right">a (alan)</th><th style="text-align:right">b (frekans)</th><th style="text-align:right">H·f sabitken f’nin üssü</th></tr></thead><tbody>` +
+    er("Nanoparçacık (ILP)", ["2", "1", "−1"]) + er("Doku girdabı", ["2", "2", "0"]) + er("Metal yüzeyi (δ ≪ R)", ["2", "0,5", "−1,5"]) +
+    er("Bobin kaybı (deri etkisi)", ["2", "≈ 0,5", "≈ −1,5"]) + er("Bobin gerilimi", ["1", "1", "0"]) + "</tbody>";
+  const rec = [];
+  if (p.htype === "mnp") {
+    rec.push(`Nanoparçacık ısınması alanla karesel, frekansla doğrusal artar. Alanı 2 katına çıkarmak ısıtmayı 4 kat, frekansı 2 katına çıkarmak 2 kat artırır; ikisi de bobin gerilimini 2 kat artırır. Gerilim bütçesi sınırlıysa alan, frekanstan daha verimli bir kaldıraçtır.`);
+    rec.push(`H·f sınırı altında çalışırken frekansı düşürüp alanı yükseltin: ısıtma ∝ (Hf)²/f. Örneğin bu H·f ile 100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır. Bedeli: bobin kaybı daha da hızlı artar (∝ f⁻¹·⁵), verim √f ile düşer; düşük frekans daha güçlü sürücü ve soğutma ister. Bobin gerilimi H·f ile orantılı olduğundan değişmez.`);
+    rec.push(`ILP sabit kabulü parçacığın gevşeme süresine bağlıdır. Néel gevşemeli küçük parçacıklarda (2πfτ ≪ 1) frekansın katkısı daha güçlü (∝ f²) olabilir. Ölçülmüş SLP–frekans verisi varsa ILP’yi çalışma frekansındaki değerle girin.`);
+  } else if (p.htype === "tis") {
+    rec.push(`Doku girdap ısınması hem alanla hem frekansla karesel artar (∝ f²H²); H·f sabitken frekanstan bağımsızdır. Bu yüzden canlıda sınır H·f çarpımı üzerine konur. Silindir yarıçapının karesiyle de büyür: büyük kesitli bölgeler daha çok ısınır.`);
+  } else {
+    rec.push(`Metal parçada akım ${si(hs.delta, "m")} derinlikte akar. Isıtma alanla karesel, frekansla yalnızca √f ile artar. Aynı ısıtma için alanı artırmak, frekansı artırmaktan çok daha etkilidir.`);
+    if (hs.P > 0.2 * e.P) rec.push(`Numune gücü bobin kaybının ${pct(hs.P / e.P, 2)}’i: numune bobine belirgin bir yük olarak yansır, Q düşer ve rezonans frekansı kayar. Sürücüyü numuneli durumda ayarlayın.`);
+  }
+  $("heatRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
+}
+
 /* ---------- theory tab ---------- */
 const SCALE_TH = {
   N: { L: 2, I: -1, V: 1, S: 0, P: -1 },
@@ -1466,7 +1688,11 @@ function renderTheory(p, e) {
   set("th-endM", pct(fieldAt(g.turns, 0, l / 2)[1] / g.b0, 3));
   const KN = nagaoka(D, l); set("th-KN", dec(KN, 4)); set("th-KNp", pct(1 - KN, 2));
   set("th-d", si(e.delta, "m")); set("th-srf", dec(e.f / e.srf, 3));
+  set("th-Hf", `${sci(e.Bpk / MU0 * e.f)} A/(m·s)`);
   set("th-R", si(e.Rac, "Ω")); set("th-Rp", si(e.XL * e.XL / e.Rac, "Ω"));
+  const hw = hardware(p, e), lc = lclDesign(p, e, hw);
+  set("sch-L1", si(lc.L1, "H")); set("sch-C", si(lc.Ct, "F")); set("sch-a", `1 : ${dec(lc.a, 3)}`);
+  set("sch-I1", si(lc.I1, "A")); set("sch-IL", si(e.Irms, "A")); set("sch-L", "L = " + si(g.L, "H")); set("sch-R", "R = " + si(e.Rac, "Ω"));
   // live scaling exponents: model vs simple theory
   const p0 = { ...p, ec: false, k: 1 }, e0 = evaluate(p0);
   const qty = r => ({ L: r.g.L, I: r.Ipk, V: r.Vpk, S: r.S, P: r.P });
@@ -1735,6 +1961,15 @@ function selfTests() {
       add("Sürücü", "LCL tasarımı istenen gücü verir", "a²·V₁²/Re(Z) = P", e.P, (l.a * h.V1) ** 2 / l.Re, 1e-9, v => si(v, "W", 6));
     }
   }
+  // tissue eddy heating: closed form vs numerical integration of sigma*(w*B*r/2)^2/2 over the disc
+  {
+    const sig = 0.6, w = 2 * Math.PI * 250e3, B = 5e-3, R = 0.02, n = 4000;
+    let num = 0; for (let i = 0; i < n; i++) { const r = (i + 0.5) * R / n; num += sig * (w * B * r / 2) ** 2 / 2 * 2 * Math.PI * r * R / n; }
+    const hs = heatSample({ htype: "tis", sig, dtis: 2 * R, ltis: 1 }, B / MU0, 250e3);
+    add("Isıtma", "Doku girdap ısısı", "σω²B²R²/16 ↔ sayısal alan integrali", num / (Math.PI * R * R), hs.spec, 1e-6, v => si(v, "W/m³", 5));
+    const m = heatSample({ htype: "mnp", ilp: 1e-9, cmnp: 5, vmnp: 1e-6 }, 4000, 2.5e5);
+    add("Isıtma", "Nanoparçacık SLP", "ILP·H²·f, 1 nH·m²/kg, 4 kA/m, 250 kHz", 4000, m.spec, 1e-12, v => si(v, "W/kg", 5));
+  }
   // 5. resistance
   const pr = { type: "solid", dS: 2e-3, layers: 1, T: 20, len: 0.15, N: 15 }, gr = { lw: 4, pitch: 0.01, d: 2e-3, Nt: 15, segs: [{ n: 15, pitch: 0.01 }] };
   add("Direnç", "Düşük frekansta R → Rdc", "dolu tel, f = 1 Hz, ρℓ/A", 1.72e-8 * 4 / (Math.PI * 1e-6), resistance(pr, gr, 1).Rac, 1e-4, v => si(v, "Ω", 5));
@@ -1792,6 +2027,8 @@ function syncCool() {
 $("k").addEventListener("input", syncCool);
 ["wpath", "wtype"].forEach(id => $(id).addEventListener("change", schedule));
 $("cool").addEventListener("change", () => { syncCool(); schedule(); });
+function syncHeat() { const t = $("htype").value; ["mnp", "tis", "met"].forEach(k => { const g = $("g-" + k); g.hidden = k !== t; g.style.display = k === t ? "flex" : ""; }); }
+$("htype").addEventListener("change", () => { syncHeat(); schedule(); }); syncHeat();
 function syncML() { const on = parseInt($("layers").value) > 1; $("g-ml").hidden = !on; $("g-ml").style.display = on ? "flex" : ""; }
 $("layers").addEventListener("input", syncML); syncML();
 ["wind", "bridge"].forEach(id => $(id).addEventListener("change", schedule));
