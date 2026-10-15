@@ -18,6 +18,8 @@ yola çıkarak hesaplar:
 - Bölümlü bobin (dağıtılmış kondansatör), bölümlü su soğutması
 - LCL seri şok tasarımı (harmonik akım hedefiyle)
 - Sekmeli arayüz, katlanabilir girdi grupları
+- Optimizasyon: frekans–alan haritası, H·f, gerilim, akım ve bobin gücü sınırları altında en iyi nokta
+- Nanoparçacık sekmesi: parçacığın alandaki davranışı, ısının hangi ölçekte kaldığı, pratik notlar
 - Nanoparçacık modeli: Néel ve Brown gevşemesi, log-normal boyut dağılımı, malzeme karşılaştırması (Rosensweig)
 - Numune ısıtma: nanoparçacık (ILP), doku girdabı, metal yüzey ısıtması; H·f güvenlik sınırları
 - Teori sekmesi: LCL devre şeması, formüller, canlı değerler, model–teori ölçeklenme karşılaştırması
