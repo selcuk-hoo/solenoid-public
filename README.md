@@ -14,5 +14,6 @@ yola çıkarak hesaplar:
 - Akım, gerilim, kayıp güç, reaktif güç, rezonans kapasitesi
 - İletken kalınlığı (akım derinliğine göre) ve sargı ölçüleri
 - Soğutma: doğal / fanlı hava ısınması, boru içi su debisi ve basınç düşümü
+- Çok katmanlı öz kapasite, sürücü ve rezonans devresi önerileri
 - Uç sıklaştırma (uçlarda daha küçük adım) ve en iyi ayar araması
 - Analitik uç durumlarla doğrulama testleri

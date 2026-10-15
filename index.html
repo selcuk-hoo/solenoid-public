@@ -122,6 +122,9 @@ table.kv td.k { color: var(--ink-2); padding-right: 12px; }
 table.kv td.k small { color: var(--muted); display: block; font-size: 12px; }
 table.kv td.v { text-align: right; white-space: normal; overflow-wrap: anywhere; }
 table.kv td.v .nw { white-space: nowrap; }
+#tbTank td.v .nw { white-space: normal; }
+#tbTank td.k { min-width: 7em; }
+#tbTank th { white-space: normal; }
 table.kv tr:last-child td { border-bottom: 0; }
 .figure { display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; }
 .figure .cap { font-size: 13px; color: var(--ink-2); }
@@ -207,7 +210,17 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <legend>Sargı</legend>
         <div class="row"><label for="N">Tur sayısı <small>/katman</small></label><input id="N" type="number" value="15" min="1" step="1"></div>
         <input id="Nr" type="range" min="2" max="60" step="1" value="15" aria-label="Tur sayısı kaydırıcısı">
-        <div class="row"><label for="layers">Katman sayısı</label><input id="layers" type="number" value="1" min="1" max="6" step="1"></div>
+        <div class="row"><label for="layers">Katman sayısı</label><input id="layers" type="number" value="1" min="1" step="1"></div>
+        <div id="g-ml" hidden style="flex-direction:column;gap:10px">
+          <div class="row"><label for="wind">Katman düzeni</label>
+            <select id="wind">
+              <option value="z" selected>İleri-geri (Z)</option>
+              <option value="fly">Hep aynı yönden</option>
+            </select>
+          </div>
+          <div class="row"><label for="tins">Yalıtım kalınlığı <small>mm, tel başına</small></label><input id="tins" type="number" value="0.05" min="0" step="0.01"></div>
+          <div class="row"><label for="epsr">Yalıtım ε<sub>r</sub></label><input id="epsr" type="number" value="3" min="1" step="0.1"></div>
+        </div>
         <div class="row"><label for="type">İletken</label>
           <select id="type">
             <option value="tube" selected>Bakır boru</option>
@@ -262,6 +275,16 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         </div>
         <div class="row" id="g-water" hidden><label for="dTw">Su sıcaklık artışı <small>K</small></label><input id="dTw" type="number" value="10" min="1" step="1"></div>
         <div class="row"><label for="dTmax">İzin verilen yüzey ısınması <small>K</small></label><input id="dTmax" type="number" value="40" min="5" step="5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Sürücü</legend>
+        <div class="row"><label for="Vdc">DC bara gerilimi <small>V</small></label><input id="Vdc" type="number" value="48" min="1" step="1"></div>
+        <div class="row"><label for="bridge">Köprü</label>
+          <select id="bridge">
+            <option value="full" selected>Tam köprü</option>
+            <option value="half">Yarım köprü</option>
+          </select>
+        </div>
       </fieldset>
       <div id="err" class="err" hidden></div>
     </aside>
@@ -328,6 +351,22 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
         <p class="rec" id="recCool"></p>
       </section>
 
+      <section class="card" id="sec-hw">
+        <div class="card-head">
+          <h2>Sürücü ve rezonans devresi</h2>
+          <p>Hesaplanan akım, gerilim ve güç için yaklaşık donanım boyutları. Ön tasarım içindir; parça seçiminde üretici verileriyle doğrulayın.</p>
+        </div>
+        <div class="grid2">
+          <div class="figure"><h3>Rezonans kondansatörü</h3><table class="kv" id="tbCap"></table></div>
+          <div class="figure"><h3>Köprü (inverter)</h3><table class="kv" id="tbBr"></table></div>
+        </div>
+        <div class="figure">
+          <h3>Tank bağlantısı: seri mi paralel mi?</h3>
+          <div class="tablewrap"><table class="kv" id="tbTank"></table></div>
+        </div>
+        <div class="figure"><h3>Öneriler</h3><ul class="notes" id="hwRec"></ul></div>
+      </section>
+
       <section class="card">
         <div class="card-head">
           <h2>Tarama</h2>
@@ -372,7 +411,8 @@ table.tests td small { display: block; color: var(--muted); font-size: 12px; }
           <li>Alan: her tur eş eksenli bir halka (eliptik integraller, Biot–Savart). Helis adımı ve uç bağlantıları ihmal edilir. Uç sıklaştırmada turların konumu gerçek adımlarla yerleştirilir; AC dirençte her bölgenin kendi doluluk oranı kullanılır. İstenen merkez alan bu modelden akıma çevrilir.</li>
           <li>Endüktans: halkalar arası Maxwell ortak endüktansları ile yüksek frekans öz endüktans toplamı. Wheeler formülü karşılaştırma için verilir.</li>
           <li>AC direnç: dolu tel ve boru için Dowell (yuvarlak iletken eşdeğer folyo, eksenel doluluk ile). Boru et kalınlığı akım derinliğinin 2 katından incese ek düzeltme uygulanır. Litz için damar deri etkisi ve dış ile demet içi alandan yakınlık kaybı hesaplanır. Belirsizlik tipik olarak ±%25.</li>
-          <li>Öz kapasite: Medhurst ampirik formülü (tek katman için). Çok katmanlı sargılarda gerçek kapasite daha yüksektir.</li>
+          <li>Öz kapasite: en dış katman için Medhurst ampirik formülü. Çok katmanlıda buna katmanlar arası kapasite eklenir: her ara yüz paralel levha (alan 2πrℓ, aralık 2t<sub>yalıtım</sub>/ε<sub>r</sub> + 0,26·d), enerji yöntemiyle uçlara indirgenir: ileri-geri sarımda C = (4/3)ΣC<sub>k</sub>/m², hep aynı yönden sarımda ΣC<sub>k</sub>/m². Tur–tur kapasitesi katman içinde ihmal edilir; ±%30 belirsizlik bekleyin.</li>
+          <li>Sürücü: köprü çıkışının temel bileşeni tam köprüde 0,9·V<sub>DC</sub>, yarım köprüde 0,45·V<sub>DC</sub> (rms). Rezonansta yük saf direnç kabul edilir; trafo oranı bu direnci köprünün göreceği değere eşler. Kondansatör kaybı tan δ = 3·10⁻⁴ (polipropilen) ile tahmin edilir.</li>
           <li>Hava soğutma: doğal konveksiyon + ışınım h ≈ 10 W/m²K, fanlı hava h ≈ 40 W/m²K, iç ve dış sargı yüzeyi birlikte. Su (isteğe bağlı, yalnızca boru iletkende): 25 °C su, düz boru, Dittus–Boelter / laminer Nu = 4,36.</li>
           <li>Bakır özdirenci 1,72·10⁻⁸ Ω·m (20 °C), sıcaklık katsayısı 0,00393 /K.</li>
         </ul>
@@ -536,9 +576,7 @@ function evaluate(p, fOverride) {
   const r = resistance(p, g, f);
   const XL = w * g.L;
   const Zs = Math.hypot(r.Rac, XL);
-  // Medhurst self-capacitance (D, l in cm -> pF)
-  const Dc = 2 * g.aMean * 100, lc = p.len * 100;
-  const Cs = Dc * (0.1126 * lc / Dc + 0.08 + 0.27 * Math.sqrt(Dc / lc)) * 1e-12;
+  const sc = selfCap(p, g), Cs = sc.Cs;
   const srf = 1 / (2 * Math.PI * Math.sqrt(g.L * Cs));
   // terminal impedance with parallel Cs: Z = Zs / (1 + jwC Zs)
   const dr = 1 - w * Cs * XL, di = w * Cs * r.Rac;
@@ -547,7 +585,7 @@ function evaluate(p, fOverride) {
   const P = Irms * Irms * r.Rac;
   return {
     g, f, w, Bpk, Ipk, Irms, ...r, XL, Zs, Q: XL / r.Rac, Vpk: Ipk * Zs, Vrms: Irms * Zs,
-    P, S: Irms * Irms * XL, W: 0.5 * g.L * Ipk * Ipk, Cs, srf,
+    P, S: Irms * Irms * XL, W: 0.5 * g.L * Ipk * Ipk, Cs, Cmed: sc.Cmed, Clay: sc.Cl, srf,
     Zt: Math.hypot(Zt_re, Zt_im), phi: Math.atan2(Zt_im, Zt_re) * 180 / Math.PI,
     Cres: 1 / (w * w * g.L),
     wheeler: wheelerL(g.aMean, p.len, g.Nt)
@@ -556,6 +594,51 @@ function evaluate(p, fOverride) {
 function wheelerL(a, len, N) { // inches formula, returns H
   const r = a / 0.0254, l = len / 0.0254;
   return r * r * N * N / (9 * r + 10 * l) * 1e-6;
+}
+
+// Self-capacitance: Medhurst (outermost layer) + inter-layer capacitance by the energy method.
+// Interface k: parallel plate, area 2*pi*r_k*l, gap = 2 t_ins/eps_r + 0.26 d (round-wire air gap).
+// Z (back-and-forth) winding: interface voltage ramps 0..2V_layer -> C = (4/3) sum C_k / m^2;
+// same-direction (flyback) winding: uniform V_layer -> C = sum C_k / m^2.
+function interfaceCaps(p, g) {
+  const EPS0 = 8.8541878e-12, gap = 2 * p.tins / p.epsr + 0.26 * g.d, out = [];
+  for (let k = 1; k < p.layers; k++) out.push(EPS0 * 2 * Math.PI * (p.Ri + k * g.d) * p.len / gap);
+  return out;
+}
+function selfCap(p, g) {
+  const m = p.layers, lc = p.len * 100;
+  const Do = 2 * (p.Ri + (m - 0.5) * g.d) * 100;  // outermost layer diameter, cm
+  const Cmed = Do * (0.1126 * lc / Do + 0.08 + 0.27 * Math.sqrt(Do / lc)) * 1e-12;
+  let Cl = 0;
+  if (m > 1) Cl = (p.wind === "fly" ? 1 : 4 / 3) * interfaceCaps(p, g).reduce((a, b) => a + b, 0) / (m * m);
+  return { Cmed, Cl, Cs: Cmed + Cl };
+}
+
+const STD_V = [40, 60, 80, 100, 150, 200, 250, 400, 600, 650, 900, 1200, 1700];
+function hardware(p, e) {
+  const P = e.P, full = p.bridge !== "half";
+  const tand = 3e-4, Pcap = e.S * tand;
+  const V1 = (full ? 0.9 : 0.45) * p.Vdc;          // fundamental rms at bridge output
+  const Rin = V1 * V1 / P;                          // resistance the bridge must see
+  const I1 = P / V1;                                // primary rms current
+  const Rp = e.XL * e.XL / e.Rac;                   // parallel tank resistance at resonance
+  const Vc = e.Vrms;                                // coil (= capacitor) rms voltage
+  const out = {
+    full, V1, Rin, I1, Pcap, Rp, Vc,
+    nSer: Math.sqrt(Rin / e.Rac),                   // primary : secondary (series tank)
+    nPar: Math.sqrt(Rin / Rp),                      // primary : secondary (parallel tank)
+    swIrms: I1 / Math.SQRT2, swIpk: I1 * Math.SQRT2,
+    Pin: (P + Pcap) / 0.9
+  };
+  out.Idc = out.Pin / p.Vdc;
+  out.Vsw = STD_V.find(v => v >= 1.5 * p.Vdc) || Math.ceil(1.5 * p.Vdc / 100) * 100;
+  out.tech = out.Vsw > 650 ? "SiC MOSFET" : e.f > 250e3 ? "GaN FET (veya düşük Qg’li Si MOSFET)" : "Si MOSFET (süper kavşak / trench)";
+  // capacitor bank from typical induction-grade polypropylene units: 2 kV peak, 10 A rms each
+  const s = Math.max(1, Math.ceil(e.Vpk / (0.8 * 2000))), par = Math.max(1, Math.ceil(e.Irms / 10));
+  Object.assign(out, { capS: s, capP: par, capUnit: e.Cres * s / par });
+  out.leadFrac = 0.1e-6 / e.g.L;                     // 10 cm of loose lead ~ 0.1 uH
+  out.probeV = 5 * Math.PI * 0.005 ** 2 * e.w * e.Bpk; // 5-turn, 10 mm pickup coil
+  return out;
 }
 
 function cooling(p, e) {
@@ -795,6 +878,7 @@ function readParams() {
     OD: v("OD") / 1000, wall: v("wall") / 1000, dS: v("dS") / 1000,
     ds: v("ds") / 1000, ns: Math.round(v("ns")), dL: v("dL") / 1000,
     ec, ne: Math.round(v("ne")), ke: v("ke"),
+    wind: $("wind").value, tins: v("tins") / 1000, epsr: v("epsr"), Vdc: v("Vdc"), bridge: $("bridge").value,
     roiD: v("roiD") / 1000, roiL: v("roiL") / 1000, dTw: v("dTw"), dTmax: v("dTmax"), cool: $("cool").value
   };
 }
@@ -813,6 +897,8 @@ function validate(p) {
   if (d > p.len / p.N * 1.0001) return `Bu iletken ${p.N} turla sığmıyor: adım ${dec(p.len / p.N * 1000)} mm, iletken ${dec(d * 1000)} mm. En fazla ${Math.floor(p.len / d)} tur.`;
   if (p.type === "tube" && p.wall * 2 >= p.OD) return "Et kalınlığı boru yarıçapından küçük olmalı (dolu iletken için ‘Dolu bakır tel’ seçin).";
   if (p.type === "litz" && p.ns * p.ds * p.ds > p.dL * p.dL) return "Litz damarları belirtilen demet çapına sığmıyor. Demet çapını büyütün veya damar sayısını azaltın.";
+  if (p.layers > 1 && (p.tins < 0 || p.epsr < 1)) return "Yalıtım kalınlığı negatif, ε_r 1’den küçük olamaz.";
+  if (p.Vdc <= 0) return "DC bara gerilimi pozitif olmalı.";
   if (p.N * p.layers > 1500) return "Toplam tur sayısı 1500’ü geçmemeli.";
   return null;
 }
@@ -892,7 +978,8 @@ function run() {
   $("radLegend").innerHTML = `<span><i class="ln" style="background:var(--series-1)"></i>z = 0 (orta düzlem)</span><span><i class="ln" style="background:var(--series-2)"></i>z = ${dec(zEdge * 1000, 3)} mm (bölge ucu)</span>`;
 
   // impedance table
-  const srfWarn = e.f > 0.3 * e.srf ? ` <span class="pill ${e.f > 0.6 * e.srf ? "crit" : "warn"}">rezonansa yakın</span>` : "";
+  const srfWarn = e.f >= e.srf ? ` <span class="pill crit">öz rezonansın üstünde</span>`
+    : e.f > 0.3 * e.srf ? ` <span class="pill ${e.f > 0.6 * e.srf ? "crit" : "warn"}">rezonansa yakın</span>` : "";
   $("tbZ").innerHTML = kv([
     ["Endüktans L", si(g.L, "H"), "halka toplamı (Wheeler: " + si(e.wheeler, "H") + ")"],
     ["Reaktans X<sub>L</sub>", si(e.XL, "Ω")],
@@ -900,7 +987,8 @@ function run() {
     ["Seri empedans |Z|", si(e.Zs, "Ω"), "faz " + dec(Math.atan2(e.XL, e.Rac) * 180 / Math.PI, 4) + "°"],
     ["Uç empedansı (öz kapasite ile)", si(e.Zt, "Ω"), "faz " + dec(e.phi, 4) + "°"],
     ["Kalite faktörü Q", dec(e.Q, 3)],
-    ["Öz kapasite / öz rezonans", si(e.Cs, "F") + " / " + si(e.srf, "Hz") + srfWarn],
+    ["Öz kapasite / öz rezonans", si(e.Cs, "F") + " / " + si(e.srf, "Hz") + srfWarn,
+      p.layers > 1 ? `Medhurst ${si(e.Cmed, "F")} + katmanlar arası ${si(e.Clay, "F")}` : "Medhurst, tek katman"],
     ["Akım (tepe / rms)", si(e.Ipk, "A") + " / " + si(e.Irms, "A")],
     ["Gerilim (tepe / rms)", si(e.Vpk, "V") + " / " + si(e.Vrms, "V")],
     ["Kayıp güç P", si(e.P, "W")],
@@ -982,6 +1070,7 @@ function run() {
   }
   if (cool.water && cool.Qv) cr.push(`Isıyı taşımak için ${dec(cool.Qv * 6e4, 2)} L/dk yeterli; iyi ısı geçişi için türbülanslı akış (≥ ${dec(cool.QturbLpm, 2)} L/dk) önerilir.`);
   $("recCool").textContent = cr.join(" ");
+  renderHW(p, e);
 
   clearTimeout(sweepTimer); sweepTimer = setTimeout(runSweep, 30);
 }
@@ -1023,6 +1112,52 @@ function runSweep() {
     fx, fy: (v, t) => u ? si(v, u, t ? 3 : 2) : dec(v, t ? 3 : 2),
     xLabel, yLabel: meta[0] + (u ? ` (${u})` : ""), xName, aria: "Tarama grafiği"
   });
+}
+
+/* ---------- driver hints ---------- */
+function renderHW(p, e) {
+  const h = hardware(p, e);
+  $("tbCap").innerHTML = kv([
+    ["Toplam rezonans kapasitesi", si(e.Cres, "F"), `L = ${si(e.g.L, "H")} ile ${si(e.f, "Hz")}`],
+    ["Harici kondansatör (paralel tank)", e.Cres > e.Cs ? si(e.Cres - e.Cs, "F") : `<span class="pill crit">kurulamaz</span>`, `öz kapasite ${si(e.Cs, "F")} düşülür`],
+    ["Gerilim (tepe / rms)", si(e.Vpk, "V") + " / " + si(e.Vrms, "V"), "bobin gerilimi kadar"],
+    ["Akım (rms)", si(e.Irms, "A"), "bobin akımı kadar"],
+    ["Reaktif güç", si(e.S, "VAr")],
+    ["Kondansatör kaybı", si(h.Pcap, "W"), "tan δ ≈ 3·10⁻⁴"],
+    ["Örnek bank", `${h.capS} seri × ${h.capP} paralel`, `birim ${si(h.capUnit, "F")}; 2 kV tepe, 10 A rms’lik birimlerle`]
+  ]);
+  $("tbBr").innerHTML = kv([
+    ["Çıkış temel bileşeni", si(h.V1, "V") + " rms", h.full ? "tam köprü, 0,9·V_DC" : "yarım köprü, 0,45·V_DC"],
+    ["Görmesi gereken yük", si(h.Rin, "Ω"), "rezonansta, P için"],
+    ["Primer akımı (rms)", si(h.I1, "A")],
+    ["Anahtar akımı (rms / tepe)", si(h.swIrms, "A") + " / " + si(h.swIpk, "A")],
+    ["Anahtar gerilim sınıfı", "≥ " + h.Vsw + " V", "1,5·V_DC payı ile"],
+    ["Önerilen anahtar", h.tech],
+    ["DC giriş (güç / akım)", si(h.Pin, "W") + " / " + si(h.Idc, "A"), "%90 verim varsayımı"]
+  ]);
+  const ratio = n => n >= 1 ? `${dec(n, 3)} : 1 (indirici)` : `1 : ${dec(1 / n, 3)} (yükseltici)`;
+  const row = (k, a, b) => `<tr><td class="k">${k}</td><td class="v">${kvVal(a)}</td><td class="v">${kvVal(b)}</td></tr>`;
+  $("tbTank").innerHTML = `<thead><tr><th style="text-align:left"></th><th style="text-align:right">Seri tank + trafo</th><th style="text-align:right">Paralel tank + trafo</th></tr></thead><tbody>` +
+    row("Trafo oranı (primer : sekonder)", ratio(h.nSer), ratio(h.nPar)) +
+    row("Sekonder akımı (rms)", si(e.Irms, "A"), si(e.P / h.Vc, "A")) +
+    row("Sekonder gerilimi (rms)", si(e.Irms * e.Rac, "V"), si(h.Vc, "V")) +
+    row("Kablo/trafodaki reaktif akım", "tam bobin akımı", "yok, tank içinde kalır") +
+    row("Köprü ile bağlantı", "doğrudan", "seri şok gerekir (LCL)") + `</tbody>`;
+  const rec = [];
+  if (e.Cres <= e.Cs) rec.push(`<b>Bu frekansta rezonans kurulamaz:</b> gereken toplam kapasite (${si(e.Cres, "F")}) sargının kendi kapasitesinden (${si(e.Cs, "F")}) küçük. Aşağıdaki öneriler ancak tasarım düzeltildikten sonra anlamlıdır.`);
+  const parallelBetter = e.Irms > 20;
+  rec.push(parallelBetter
+    ? `Bobin akımı yüksek (${si(e.Irms, "A")} rms). Kondansatörü bobin uçlarına paralel bağlayın; büyük reaktif akım yalnızca bobin ile kondansatör arasında döner, trafo ve kablolar ${si(e.P / h.Vc, "A")} gibi küçük bir akım taşır. Gerilim kaynaklı köprü paralel tankı doğrudan süremez: araya seri bir şok koyun (LCL) ya da akım kaynaklı besleme kullanın.`
+    : `Bobin akımı orta düzeyde (${si(e.Irms, "A")} rms). En basit yol seri rezonans: köprü → eşleştirme trafosu → seri C → bobin. Trafo sekonderi bobin akımının tamamını taşır.`);
+  rec.push(`Köprüyü rezonansın biraz üstünde çalıştırın; yük hafif endüktif kalır ve anahtarlar sıfır gerilimde açılır (ZVS). Sıcaklıkla L ve C kayar; frekansı faz kilitli döngü (PLL) ile akım–gerilim fazına göre izleyin.`);
+  if (h.leadFrac > 0.005) rec.push(`Kondansatör bankını bobin uçlarına mümkün olduğunca yakın kurun: 10 cm’lik gevşek bağlantı ≈ 0,1 µH, bu da L’nin ${pct(h.leadFrac, 2)}’i. Bağlantıları geniş bakır şerit veya bükülü çift yapın.`);
+  rec.push(`Kondansatör için yüksek frekansa uygun polipropilen (MKP) veya iletimle soğutulan endüksiyon tipi kullanın; seramik X7R/Y5V kullanmayın. ${e.S > 5000 ? "Reaktif güç yüksek; bankı soğutun veya su soğutmalı endüksiyon kondansatörü seçin." : ""}`);
+  rec.push(`Bobin akımını akım trafosu veya Rogowski bobiniyle ölçün. Alanı doğrudan ölçmek için 5 turlu, 10 mm çaplı bir algılama bobini merkezde yaklaşık ${si(h.probeV, "V")} tepe gerilim verir (V = N·A·ω·B).`);
+  if (e.Vpk > 1000) rec.push(`Uç gerilimi ${si(e.Vpk, "V")} tepe: yüksek frekansta korona ve yüzey atlaması olur. Uçlar arasında geniş açıklık bırakın, keskin kenarlardan kaçının, PTFE veya silikon yalıtım kullanın; çalışırken dokunmayı engelleyen bir kapak koyun.`);
+  if (e.f >= e.srf) rec.push(`Çalışma frekansı öz rezonansın (${si(e.srf, "Hz")}) üstünde: bobin endüktör gibi değil kondansatör gibi davranır. Tur veya katman sayısını azaltın ya da katmanlar arasına ara yalıtım koyun.`);
+  else if (e.f > 0.3 * e.srf) rec.push(`Öz rezonans (${si(e.srf, "Hz")}) çalışma frekansına yakın; rezonans kondansatörünün bir kısmını sargının kendi kapasitesi oluşturur ve ayar hassaslaşır. Tur sayısını azaltmak veya tek katmana geçmek iyileştirir.`);
+  if (h.nSer > 30 && !parallelBetter) rec.push(`Seri tankta trafo oranı ${dec(h.nSer, 2)}:1 çok yüksek; DC bara gerilimini düşürmek veya paralel tanka geçmek daha uygun olabilir.`);
+  $("hwRec").innerHTML = rec.map(t => `<li>${t}</li>`).join("");
 }
 
 /* ---------- end compensation ---------- */
@@ -1159,6 +1294,21 @@ function selfTests() {
   const gs = buildGeo({ ...pg, ke: 1 }), gu = buildGeo({ ...pg, ec: false });
   const dzMax = gs.turns.reduce((m, t, i) => Math.max(m, Math.abs(t.z - gu.turns[i].z)), 0);
   add("Geometri", "Oran = 1 → eşit adım", "en büyük konum farkı / ℓ = 0", 1, 1 + dzMax / pg.len, 1e-12, v => (v - 1).toExponential(1));
+  // multilayer self-capacitance: closed form vs discrete turn-by-turn energy
+  for (const wind of ["z", "fly"]) {
+    const m = 4, Nl = 60, pc = { Ri: 0.04, len: 0.15, layers: m, tins: 5e-5, epsr: 3, wind, N: Nl };
+    const gc = { d: 1e-3 }, Ck = interfaceCaps(pc, gc);
+    let W = 0;  // total voltage 1 V, turns numbered along the winding
+    const idx = (k, j) => k * Nl + (wind === "z" && k % 2 ? Nl - 1 - j : j);
+    for (let k = 0; k < m - 1; k++) for (let j = 0; j < Nl; j++) {
+      const dV = (idx(k + 1, j) - idx(k, j)) / (m * Nl);
+      W += 0.5 * (Ck[k] / Nl) * dV * dV;
+    }
+    const cs = selfCap(pc, gc);
+    add("Kapasite", `Katmanlar arası C (${wind === "z" ? "ileri-geri" : "aynı yön"})`, "kapalı form ↔ tur tur enerji toplamı, 4 katman", 2 * W, cs.Cl, 1e-3, v => si(v, "F", 5));
+  }
+  const p1 = { Ri: 0.04, len: 0.15, layers: 1 }, g1 = { d: 6e-3 }, D1 = 2 * (0.04 + 3e-3) * 100;
+  add("Kapasite", "Tek katmanda yalnızca Medhurst", "C = D(0,1126ℓ/D + 0,08 + 0,27√(D/ℓ)) pF", D1 * (0.1126 * 15 / D1 + 0.08 + 0.27 * Math.sqrt(D1 / 15)) * 1e-12, selfCap(p1, g1).Cs, 1e-12, v => si(v, "F", 5));
   // 5. resistance
   const pr = { type: "solid", dS: 2e-3, layers: 1, T: 20, len: 0.15, N: 15 }, gr = { lw: 4, pitch: 0.01, d: 2e-3, Nt: 15, segs: [{ n: 15, pitch: 0.01 }] };
   add("Direnç", "Düşük frekansta R → Rdc", "dolu tel, f = 1 Hz, ρℓ/A", 1.72e-8 * 4 / (Math.PI * 1e-6), resistance(pr, gr, 1).Rac, 1e-4, v => si(v, "Ω", 5));
@@ -1211,6 +1361,9 @@ function syncCool() {
   $("g-water").hidden = $("cool").value !== "water";
 }
 $("cool").addEventListener("change", () => { syncCool(); schedule(); });
+function syncML() { const on = parseInt($("layers").value) > 1; $("g-ml").hidden = !on; $("g-ml").style.display = on ? "flex" : ""; }
+$("layers").addEventListener("input", syncML); syncML();
+["wind", "bridge"].forEach(id => $(id).addEventListener("change", schedule));
 syncCool();
 $("bpk").addEventListener("click", () => { Bmode = "pk"; $("bpk").setAttribute("aria-pressed", "true"); $("brms").setAttribute("aria-pressed", "false"); schedule(); });
 $("brms").addEventListener("click", () => { Bmode = "rms"; $("brms").setAttribute("aria-pressed", "true"); $("bpk").setAttribute("aria-pressed", "false"); schedule(); });
