@@ -1,0 +1,13 @@
+# Sayfa ve servis çalışanı tarayıcının HTTP önbelleğinde takılı kalmasın;
+# çevrimdışı önbelleği zaten sw.js yönetiyor.
+/
+  Cache-Control: no-store
+
+/index.html
+  Cache-Control: no-store
+
+/sw.js
+  Cache-Control: no-store
+
+/manifest.json
+  Cache-Control: no-store

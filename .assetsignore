@@ -1,0 +1,6 @@
+# Cloudflare'ın statik dosya yükleyicisi bunları sunmasın.
+.git
+.wrangler
+wrangler.jsonc
+.gitignore
+README.md

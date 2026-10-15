@@ -1,0 +1,1236 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Endüksiyon Bobini Tasarımcısı</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--pwa-->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="ikon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#14191c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bobin">
+<!--/pwa-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky input rail on the left (instrument panel), results flow on the right; stacks on phones. */
+:root {
+  --bg: #f3f5f6;
+  --panel: #ffffff;
+  --ink: #14191c;
+  --ink-2: #4a545a;
+  --muted: #78838a;
+  --line: #d8dee1;
+  --line-soft: #e8ecee;
+  --copper: #b0532a;
+  --copper-soft: #f6e6dc;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --good: #1d7f47; --good-soft: #e0f2e7;
+  --warn: #a66a00; --warn-soft: #fbefd6;
+  --crit: #c0392b; --crit-soft: #fbe3e0;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1214; --panel: #171b1e; --ink: #e8ecee; --ink-2: #b2bbc0; --muted: #87929a;
+    --line: #2a3136; --line-soft: #20262a; --copper: #e2895a; --copper-soft: #3a2418;
+    --series-1: #3987e5; --series-2: #d95926;
+    --good: #4cc27d; --good-soft: #15301f; --warn: #e0a83a; --warn-soft: #33270f;
+    --crit: #ef6a5c; --crit-soft: #3a1915;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1214; --panel: #171b1e; --ink: #e8ecee; --ink-2: #b2bbc0; --muted: #87929a;
+  --line: #2a3136; --line-soft: #20262a; --copper: #e2895a; --copper-soft: #3a2418;
+  --series-1: #3987e5; --series-2: #d95926;
+  --good: #4cc27d; --good-soft: #15301f; --warn: #e0a83a; --warn-soft: #33270f;
+  --crit: #ef6a5c; --crit-soft: #3a1915;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: .01em; }
+h1 { font-size: 30px; line-height: 1.1; }
+h2 { font-size: 22px; }
+h3 { font-size: 15px; font-family: var(--f-body); font-weight: 600; }
+.num, td.v, .tile .val, input { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; border-bottom: 2px solid var(--copper); padding-bottom: 12px; }
+header.top p { margin: 4px 0 0; color: var(--ink-2); max-width: 70ch; }
+.badge { font: 500 12px var(--f-mono); color: var(--copper); letter-spacing: .06em; text-transform: uppercase; }
+.app { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 920px) { .app { grid-template-columns: minmax(0, 1fr); } }
+
+/* input rail */
+.rail { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 18px; position: sticky; top: calc(12px + env(safe-area-inset-top, 0px)); max-height: calc(100vh - 24px); overflow-y: auto; }
+@media (max-width: 920px) { .rail { position: static; max-height: none; } }
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+legend { font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--copper); padding: 0 0 6px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 104px; align-items: center; gap: 8px; }
+.row label { color: var(--ink-2); font-size: 14px; }
+.row label small { color: var(--muted); }
+input[type=number], select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); font-size: 14px; }
+select { font-family: var(--f-body); }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--copper); outline-offset: 1px; }
+input[type=range] { width: 100%; accent-color: var(--copper); margin: -4px 0 0; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--ink-2); padding: 6px 4px; font: 500 13px var(--f-body); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--copper-soft); color: var(--copper); font-weight: 600; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.err { background: var(--crit-soft); color: var(--crit); border-radius: 4px; padding: 8px 10px; font-size: 13.5px; }
+
+/* results */
+.main { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+@media (max-width: 700px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--panel); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile .lab { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.tile .val { font-size: 22px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .val.txt { font: 600 20px var(--f-display); white-space: normal; }
+.tile .sub { font-size: 12.5px; color: var(--ink-2); font-family: var(--f-mono); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.card-head p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 70ch; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.crit { background: var(--crit-soft); color: var(--crit); }
+table.kv { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.kv th { font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.kv th + th { padding-left: 12px; }
+table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
+table.kv td.k { color: var(--ink-2); padding-right: 12px; }
+table.kv td.k small { color: var(--muted); display: block; font-size: 12px; }
+table.kv td.v { text-align: right; white-space: nowrap; }
+table.kv tr:last-child td { border-bottom: 0; }
+.figure { display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; }
+.figure .cap { font-size: 13px; color: var(--ink-2); }
+.heatwrap { position: relative; width: 100%; }
+canvas#heat { width: 100%; display: block; border-radius: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend i.ln { height: 2px; border-radius: 1px; }
+.readout { font: 12.5px var(--f-mono); color: var(--ink-2); min-height: 1.5em; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--muted); font: 11px var(--f-mono); }
+svg.chart .axl { fill: var(--ink-2); font: 12px var(--f-body); }
+svg.chart .grid { stroke: var(--line-soft); stroke-width: 1; }
+svg.chart .base { stroke: var(--line); stroke-width: 1; }
+svg.chart .band { fill: var(--copper-soft); }
+svg.chart .ref { stroke: var(--muted); stroke-dasharray: 3 3; stroke-width: 1; }
+svg.chart .s1 { stroke: var(--series-1); fill: none; stroke-width: 2; }
+svg.chart .s2 { stroke: var(--series-2); fill: none; stroke-width: 2; }
+svg.chart .dot1 { fill: var(--series-1); stroke: var(--panel); stroke-width: 2; }
+svg.chart .dot2 { fill: var(--series-2); stroke: var(--panel); stroke-width: 2; }
+svg.chart .mark { fill: var(--copper); stroke: var(--panel); stroke-width: 2; }
+svg.chart .cross { stroke: var(--ink-2); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font: 12px var(--f-mono); color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.metric { border-left: 2px solid var(--line); padding: 2px 0 2px 10px; min-width: 0; }
+.metric .lab { font-size: 12.5px; color: var(--muted); }
+.metric .val { font: 500 17px var(--f-mono); font-variant-numeric: tabular-nums; }
+.sweepctl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.sweepctl label { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+.sweepctl select { width: auto; }
+table.tests { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.tests th { text-align: left; font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.tests td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+table.tests td.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+table.tests td small { display: block; color: var(--muted); font-size: 12px; }
+.tablewrap { overflow-x: auto; }
+.btn { border: 1px solid var(--copper); background: var(--copper-soft); color: var(--copper); border-radius: 4px; padding: 6px 14px; font: 600 14px var(--f-body); cursor: pointer; }
+.notes { font-size: 13.5px; color: var(--ink-2); margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; max-width: 95ch; }
+.rec { font-size: 14px; color: var(--ink-2); margin: 0; max-width: 75ch; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="badge">Hava çekirdekli solenoid · 100–500 kHz</div>
+      <h1>Endüksiyon Bobini Tasarımcısı</h1>
+      <p>İç hacmi, hedef alanı ve iletkeni girin. Alan haritası, empedans, kayıp güç, iletken kalınlığı ve soğutma ihtiyacı her değişiklikte yeniden hesaplanır.</p>
+    </div>
+  </header>
+
+  <div class="app">
+    <aside class="rail" aria-label="Girdiler">
+      <fieldset>
+        <legend>İç hacim (boşluk)</legend>
+        <div class="row"><label for="Di">İç çap <small>mm</small></label><input id="Di" type="number" value="80" min="5" step="1"></div>
+        <div class="row"><label for="len">Sargı uzunluğu <small>mm</small></label><input id="len" type="number" value="150" min="5" step="1"></div>
+        <p class="hint">İç çap, iletkenin iç yüzeyine kadar olan serbest boşluktur.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Çalışma noktası</legend>
+        <div class="seg" role="group" aria-label="Alan birimi">
+          <button type="button" id="umT" aria-pressed="true">B · mT</button>
+          <button type="button" id="ukAm" aria-pressed="false">H · kA/m</button>
+        </div>
+        <div class="row"><label for="B">Merkez alan <small id="Bunit">mT</small></label><input id="B" type="number" value="5" min="0.01" step="0.1"></div>
+        <input id="Br" type="range" min="1" max="10" step="0.1" value="5" aria-label="Merkez alan kaydırıcısı">
+        <p class="hint" id="Bconv"></p>
+        <div class="seg" role="group" aria-label="Alan değeri türü">
+          <button type="button" id="bpk" aria-pressed="true">Tepe değer</button>
+          <button type="button" id="brms" aria-pressed="false">RMS</button>
+        </div>
+        <div class="row"><label for="f">Frekans <small>kHz</small></label><input id="f" type="number" value="250" min="1" step="5"></div>
+        <input id="fr" type="range" min="100" max="500" step="5" value="250" aria-label="Frekans kaydırıcısı">
+        <div class="row"><label for="T">İletken sıcaklığı <small>°C</small></label><input id="T" type="number" value="40" step="5"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Sargı</legend>
+        <div class="row"><label for="N">Tur sayısı <small>/katman</small></label><input id="N" type="number" value="15" min="1" step="1"></div>
+        <input id="Nr" type="range" min="2" max="60" step="1" value="15" aria-label="Tur sayısı kaydırıcısı">
+        <div class="row"><label for="layers">Katman sayısı</label><input id="layers" type="number" value="1" min="1" max="6" step="1"></div>
+        <div class="row"><label for="type">İletken</label>
+          <select id="type">
+            <option value="tube" selected>Bakır boru</option>
+            <option value="solid">Dolu bakır tel</option>
+            <option value="litz">Litz tel</option>
+          </select>
+        </div>
+        <div id="g-tube" class="cgroup" style="display:flex;flex-direction:column;gap:10px">
+          <div class="row"><label for="OD">Boru dış çapı <small>mm</small></label><input id="OD" type="number" value="6" min="0.5" step="0.5"></div>
+          <div class="row"><label for="wall">Et kalınlığı <small>mm</small></label><input id="wall" type="number" value="1" min="0.05" step="0.1"></div>
+        </div>
+        <div id="g-solid" class="cgroup" hidden style="flex-direction:column;gap:10px">
+          <div class="row"><label for="dS">Tel çapı <small>mm</small></label><input id="dS" type="number" value="3" min="0.1" step="0.1"></div>
+        </div>
+        <div id="g-litz" class="cgroup" hidden style="flex-direction:column;gap:10px">
+          <div class="row"><label for="ds">Damar çapı <small>mm</small></label><input id="ds" type="number" value="0.1" min="0.02" step="0.01"></div>
+          <div class="row"><label for="ns">Damar sayısı</label><input id="ns" type="number" value="420" min="1" step="10"></div>
+          <div class="row"><label for="dL">Demet dış çapı <small>mm</small></label><input id="dL" type="number" value="3.0" min="0.2" step="0.1"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Uç sıklaştırma</legend>
+        <div class="seg" role="group" aria-label="Uç sıklaştırma">
+          <button type="button" id="ecOff" aria-pressed="true">Eşit adım</button>
+          <button type="button" id="ecOn" aria-pressed="false">Uçlar sık</button>
+        </div>
+        <div id="g-ec" hidden style="flex-direction:column;gap:10px">
+          <div class="row"><label for="ne">Sık tur sayısı <small>her uçta</small></label><input id="ne" type="number" value="3" min="1" step="1"></div>
+          <div class="row"><label for="ke">Uç adımı / orta adım</label><input id="ke" type="number" value="0.6" min="0.1" max="1" step="0.02"></div>
+          <button type="button" class="btn" id="ecOpt">Bölge için en iyi ayarı bul</button>
+          <p class="hint" id="ecInfo"></p>
+        </div>
+        <p class="hint">Toplam tur sayısı değişmez; uçtaki turlar sıklaşır, ortadakiler açılır.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Değerlendirme bölgesi</legend>
+        <div class="row"><label for="roiD">Bölge çapı <small>mm</small></label><input id="roiD" type="number" value="40" min="0" step="5"></div>
+        <div class="row"><label for="roiL">Bölge uzunluğu <small>mm</small></label><input id="roiL" type="number" value="80" min="0" step="5"></div>
+        <p class="hint">Numunenin duracağı merkezi silindir. Haritada kesikli çizgiyle gösterilir.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Soğutma</legend>
+        <div class="row"><label for="cool">Yöntem</label>
+          <select id="cool">
+            <option value="nat" selected>Doğal hava</option>
+            <option value="fan">Fanlı hava</option>
+            <option value="water">Su (boru içi)</option>
+          </select>
+        </div>
+        <div class="row" id="g-water" hidden><label for="dTw">Su sıcaklık artışı <small>K</small></label><input id="dTw" type="number" value="10" min="1" step="1"></div>
+        <div class="row"><label for="dTmax">İzin verilen yüzey ısınması <small>K</small></label><input id="dTmax" type="number" value="40" min="5" step="5"></div>
+      </fieldset>
+      <div id="err" class="err" hidden></div>
+    </aside>
+
+    <main class="main">
+      <section class="tiles" aria-label="Özet">
+        <div class="tile"><span class="lab">Bobin akımı</span><span class="val" id="t-I">–</span><span class="sub" id="t-I2">–</span></div>
+        <div class="tile"><span class="lab">Uç gerilimi</span><span class="val" id="t-V">–</span><span class="sub" id="t-V2">–</span></div>
+        <div class="tile"><span class="lab">Empedans</span><span class="val" id="t-Z">–</span><span class="sub" id="t-Z2">–</span></div>
+        <div class="tile"><span class="lab">Kayıp güç</span><span class="val" id="t-P">–</span><span class="sub" id="t-P2">–</span></div>
+        <div class="tile"><span class="lab">Endüktans</span><span class="val" id="t-L">–</span><span class="sub" id="t-L2">–</span></div>
+        <div class="tile"><span class="lab">AC direnç</span><span class="val" id="t-R">–</span><span class="sub" id="t-R2">–</span></div>
+        <div class="tile"><span class="lab">Bölgede düzgünlük</span><span class="val" id="t-U">–</span><span class="sub" id="t-U2">–</span></div>
+        <div class="tile"><span class="lab">Soğutma</span><span class="val txt" id="t-C">–</span><span class="sub" id="t-C2">–</span></div>
+      </section>
+
+      <section class="card" id="sec-field">
+        <div class="card-head">
+          <h2>Alan düzgünlüğü</h2>
+          <p>Her tur, gerçek konumunda bir akım halkası olarak modellenir. Haritadaki renk |B|’nin merkez değerden sapmasıdır (r–z kesiti).</p>
+        </div>
+        <div class="figure">
+          <div class="heatwrap"><canvas id="heat" height="300" aria-label="Alan sapma haritası"></canvas></div>
+          <div class="legend" id="heatLegend"></div>
+          <div class="readout" id="heatRead">İmleci harita üzerinde gezdirin.</div>
+        </div>
+        <div class="metrics" id="umetrics"></div>
+        <div class="tablewrap" id="ecCmp" hidden></div>
+        <div class="grid2">
+          <div class="figure">
+            <h3>Boyuna profil (eksen üzerinde)</h3>
+            <div class="chartbox" id="chAx"></div>
+            <div class="cap">Gölgeli alan sargının kapladığı uzunluk.</div>
+          </div>
+          <div class="figure">
+            <h3>Radyal profil</h3>
+            <div class="chartbox" id="chRad"></div>
+            <div class="legend" id="radLegend"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid2">
+        <section class="card">
+          <div class="card-head"><h2>Empedans ve güç</h2></div>
+          <table class="kv" id="tbZ"></table>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>İletken ve kalınlık</h2></div>
+          <table class="kv" id="tbC"></table>
+          <p class="rec" id="recC"></p>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Soğutma ihtiyacı</h2>
+          <span id="coolPill" class="pill good">–</span>
+        </div>
+        <div class="grid2">
+          <table class="kv" id="tbAir"></table>
+          <table class="kv" id="tbWater"></table>
+        </div>
+        <p class="rec" id="recCool"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Tarama</h2>
+          <p>Hedef alan sabit tutulur, seçilen değişken taranır. Turuncu nokta mevcut tasarımdır.</p>
+        </div>
+        <div class="sweepctl">
+          <label for="sx">Değişken
+            <select id="sx">
+              <option value="f">Frekans</option>
+              <option value="N">Tur sayısı</option>
+              <option value="d">İletken çapı</option>
+            </select>
+          </label>
+          <label for="sy">Çıktı
+            <select id="sy">
+              <option value="P">Kayıp güç</option>
+              <option value="V">Uç gerilimi (tepe)</option>
+              <option value="I">Akım (tepe)</option>
+              <option value="Z">|Z|</option>
+              <option value="Q">Kalite faktörü Q</option>
+              <option value="R">AC direnç</option>
+            </select>
+          </label>
+        </div>
+        <div class="chartbox" id="chSw"></div>
+      </section>
+
+      <section class="card" id="sec-tests">
+        <div class="card-head">
+          <h2>Doğrulama testleri</h2>
+          <span id="testSum" class="pill good">–</span>
+        </div>
+        <p class="rec">Hesap çekirdeği, sonucu analitik olarak bilinen uç durumlarla karşılaştırılır. Referanslar modelden bağımsız yoldan hesaplanır (kapalı form, sayısal Biot–Savart veya Neumann integrali). “Hedef alan” testi dışındakiler girdilerinizden bağımsızdır.</p>
+        <div><button type="button" class="btn" id="runTests">Testleri yeniden çalıştır</button></div>
+        <div class="tablewrap"><table class="tests" id="tbTests"></table></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Model ve varsayımlar</h2></div>
+        <ul class="notes">
+          <li>Hava çekirdekli, yüksüz bobin. İş parçası veya ferrit yoksa kayıp yalnızca iletkendedir; iletken bir numune ek kayıp ve endüktans düşüşü getirir.</li>
+          <li>Alan: her tur eş eksenli bir halka (eliptik integraller, Biot–Savart). Helis adımı ve uç bağlantıları ihmal edilir. Uç sıklaştırmada turların konumu gerçek adımlarla yerleştirilir; AC dirençte her bölgenin kendi doluluk oranı kullanılır. İstenen merkez alan bu modelden akıma çevrilir.</li>
+          <li>Endüktans: halkalar arası Maxwell ortak endüktansları ile yüksek frekans öz endüktans toplamı. Wheeler formülü karşılaştırma için verilir.</li>
+          <li>AC direnç: dolu tel ve boru için Dowell (yuvarlak iletken eşdeğer folyo, eksenel doluluk ile). Boru et kalınlığı akım derinliğinin 2 katından incese ek düzeltme uygulanır. Litz için damar deri etkisi ve dış ile demet içi alandan yakınlık kaybı hesaplanır. Belirsizlik tipik olarak ±%25.</li>
+          <li>Öz kapasite: Medhurst ampirik formülü (tek katman için). Çok katmanlı sargılarda gerçek kapasite daha yüksektir.</li>
+          <li>Hava soğutma: doğal konveksiyon + ışınım h ≈ 10 W/m²K, fanlı hava h ≈ 40 W/m²K, iç ve dış sargı yüzeyi birlikte. Su (isteğe bağlı, yalnızca boru iletkende): 25 °C su, düz boru, Dittus–Boelter / laminer Nu = 4,36.</li>
+          <li>Bakır özdirenci 1,72·10⁻⁸ Ω·m (20 °C), sıcaklık katsayısı 0,00393 /K.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+const MU0 = 4e-7 * Math.PI;
+const $ = id => document.getElementById(id);
+
+/* ---------- formatting ---------- */
+function dec(x, sig = 3) {
+  if (!isFinite(x)) return "–";
+  if (x === 0) return "0";
+  const a = Math.abs(x);
+  const digits = Math.max(0, sig - 1 - Math.floor(Math.log10(a)));
+  return x.toFixed(Math.min(digits, 6)).replace(".", ",");
+}
+function si(x, unit, sig = 3) {
+  if (!isFinite(x)) return "–";
+  if (x === 0) return "0 " + unit;
+  const pre = [[1e9, "G"], [1e6, "M"], [1e3, "k"], [1, ""], [1e-3, "m"], [1e-6, "µ"], [1e-9, "n"], [1e-12, "p"]];
+  const a = Math.abs(x);
+  for (const [s, p] of pre) if (a >= s * 0.9995) return dec(x / s, sig) + " " + p + unit;
+  return dec(x / 1e-12, sig) + " p" + unit;
+}
+const pct = (x, sig = 2) => isFinite(x) ? dec(x * 100, sig) + " %" : "–";
+
+/* ---------- electromagnetics ---------- */
+function ellipKE(m) {
+  if (m < 0) m = 0;
+  if (m > 1 - 1e-15) m = 1 - 1e-15;
+  let a = 1, b = Math.sqrt(1 - m), s = 0.5 * m, pw = 0.5;
+  for (let i = 0; i < 40; i++) {
+    const c = (a - b) / 2, an = (a + b) / 2;
+    b = Math.sqrt(a * b); a = an; pw *= 2; s += pw * c * c;
+    if (Math.abs(c) < 1e-16) break;
+  }
+  const K = Math.PI / (2 * a);
+  return [K, K * (1 - s)];
+}
+// field of a 1 A loop of radius a at axial offset dz, radius r -> [Br, Bz]
+function loopB(a, dz, r) {
+  const a2 = a * a, r2 = r * r, z2 = dz * dz;
+  const al2 = a2 + r2 + z2 - 2 * a * r, be2 = a2 + r2 + z2 + 2 * a * r, be = Math.sqrt(be2);
+  const [K, E] = ellipKE(1 - al2 / be2);
+  const C = MU0 / Math.PI;
+  const Bz = C / (2 * al2 * be) * ((a2 - r2 - z2) * E + al2 * K);
+  const Br = r < 1e-9 ? 0 : C * dz / (2 * al2 * be * r) * ((a2 + r2 + z2) * E - al2 * K);
+  return [Br, Bz];
+}
+function fieldAt(turns, r, z) {
+  let br = 0, bz = 0;
+  for (const t of turns) { const [x, y] = loopB(t.a, z - t.z, r); br += x; bz += y; }
+  return [br, bz];
+}
+function mutual(a, b, d) {
+  const k2 = 4 * a * b / ((a + b) ** 2 + d * d), k = Math.sqrt(k2);
+  const [K, E] = ellipKE(k2);
+  return MU0 * Math.sqrt(a * b) * ((2 / k - k) * K - 2 / k * E);
+}
+// Y = 0: high-frequency self term (surface current); Y = 0.25: uniform (DC) current
+function inductance(turns, rc, Y = 0) {
+  let L = 0;
+  for (const t of turns) L += MU0 * t.a * (Math.log(8 * t.a / rc) - 2 + Y);
+  for (let i = 0; i < turns.length; i++)
+    for (let j = i + 1; j < turns.length; j++)
+      L += 2 * mutual(turns[i].a, turns[j].a, turns[i].z - turns[j].z);
+  return L;
+}
+function dowell(D, m) {
+  if (D < 0.05) return 1;
+  let t1 = 1, t2 = 1;
+  if (D < 40) {
+    t1 = (Math.sinh(2 * D) + Math.sin(2 * D)) / (Math.cosh(2 * D) - Math.cos(2 * D));
+    t2 = (Math.sinh(D) - Math.sin(D)) / (Math.cosh(D) + Math.cos(D));
+  }
+  return Math.max(1, D * (t1 + 2 * (m * m - 1) / 3 * t2));
+}
+
+/* ---------- design model ---------- */
+function condOD(p) { return p.type === "tube" ? p.OD : p.type === "solid" ? p.dS : p.dL; }
+
+// axial winding segments: [{n, pitch}], end-compensated if enabled
+function segments(p) {
+  const Nl = p.N;
+  if (p.ec && p.ne >= 1 && 2 * p.ne < Nl && p.ke > 0) {
+    const Nc = Nl - 2 * p.ne, pc = p.len / (2 * p.ne * p.ke + Nc);
+    return [{ n: p.ne, pitch: pc * p.ke }, { n: Nc, pitch: pc }, { n: p.ne, pitch: pc * p.ke }];
+  }
+  return [{ n: Nl, pitch: p.len / Nl }];
+}
+function buildGeo(p) {
+  const d = condOD(p), Nl = p.N, m = p.layers, segs = segments(p), zs = [], turns = [];
+  let z0 = -p.len / 2;
+  for (const sg of segs) for (let i = 0; i < sg.n; i++) { zs.push(z0 + sg.pitch / 2); z0 += sg.pitch; }
+  for (let k = 0; k < m; k++) {
+    const a = p.Ri + d / 2 + k * d;
+    for (const z of zs) turns.push({ a, z });
+  }
+  let lw = 0; for (const t of turns) lw += 2 * Math.PI * t.a;
+  const pitches = segs.map(sg => sg.pitch);
+  return { d, segs, pitch: p.len / Nl, pMin: Math.min(...pitches), pMax: Math.max(...pitches), turns, Nt: Nl * m, lw, aMean: p.Ri + m * d / 2, Dout: 2 * (p.Ri + m * d) };
+}
+
+const geoCache = new Map();
+function geoEM(p) {
+  const key = [p.Ri, p.len, p.N, p.layers, condOD(p), p.ec ? p.ne + ":" + p.ke : "u"].join("|");
+  if (geoCache.has(key)) return geoCache.get(key);
+  const g = buildGeo(p);
+  g.L = inductance(g.turns, g.d / 2);
+  g.b0 = fieldAt(g.turns, 0, 0)[1];
+  if (geoCache.size > 400) geoCache.clear();
+  geoCache.set(key, g);
+  return g;
+}
+
+function resistance(p, g, f) {
+  const rho = 1.72e-8 * (1 + 0.00393 * (p.T - 20));
+  const delta = Math.sqrt(rho / (Math.PI * f * MU0));
+  const m = p.layers, lw = g.lw;
+  // Dowell factor averaged over winding segments (each with its own porosity)
+  const frOf = h => g.segs.reduce((acc, sg) => acc + sg.n * dowell(0.886 * h / delta * Math.sqrt(Math.min(1, g.d / sg.pitch)), m), 0) / p.N;
+  const out = { rho, delta };
+  if (p.type === "solid") {
+    const d = p.dS;
+    out.Rdc = rho * lw / (Math.PI * d * d / 4);
+    out.Rac = frOf(d) * out.Rdc;
+  } else if (p.type === "tube") {
+    const OD = p.OD, t = Math.min(p.wall, OD / 2), ID = OD - 2 * t;
+    out.Rdc = rho * lw / (Math.PI * (OD * OD - ID * ID) / 4);
+    const Rs = rho * lw / (Math.PI * OD * OD / 4);
+    const thin = 1 / (1 - Math.exp(-t / delta));
+    out.Rac = Math.max(out.Rdc, frOf(OD) * Rs * thin);
+    out.thin = t < 2 * delta;
+  } else {
+    const ns = p.ns, ds = p.ds, rb = p.dL / 2, lay = 1.03;
+    const Acu = ns * Math.PI * ds * ds / 4;
+    out.Rdc = rho * lw * lay / Acu;
+    const x = ds / 2 / delta, Fs = 1 + x ** 4 / 48;
+    const w = 2 * Math.PI * f;
+    const Bw = MU0 * g.Nt / p.len, Bb = MU0 / (2 * Math.PI * rb);
+    const kprox = ns * lw * lay * Math.PI * w * w * ds ** 4 / (128 * rho) * (Bw * Bw / 3 + Bb * Bb / 2);
+    out.Rprox = 2 * kprox;
+    out.Rac = out.Rdc * Fs + out.Rprox;
+    out.fill = Acu / (Math.PI * rb * rb);
+    out.strandBig = ds > delta;
+  }
+  out.FR = out.Rac / out.Rdc;
+  return out;
+}
+
+function evaluate(p, fOverride) {
+  const g = geoEM(p);
+  const f = fOverride || p.f, w = 2 * Math.PI * f;
+  const Bpk = p.Bmode === "pk" ? p.B : p.B * Math.SQRT2;
+  const Ipk = Bpk / g.b0, Irms = Ipk / Math.SQRT2;
+  const r = resistance(p, g, f);
+  const XL = w * g.L;
+  const Zs = Math.hypot(r.Rac, XL);
+  // Medhurst self-capacitance (D, l in cm -> pF)
+  const Dc = 2 * g.aMean * 100, lc = p.len * 100;
+  const Cs = Dc * (0.1126 * lc / Dc + 0.08 + 0.27 * Math.sqrt(Dc / lc)) * 1e-12;
+  const srf = 1 / (2 * Math.PI * Math.sqrt(g.L * Cs));
+  // terminal impedance with parallel Cs: Z = Zs / (1 + jwC Zs)
+  const dr = 1 - w * Cs * XL, di = w * Cs * r.Rac;
+  const den = dr * dr + di * di;
+  const Zt_re = (r.Rac * dr + XL * di) / den, Zt_im = (XL * dr - r.Rac * di) / den;
+  const P = Irms * Irms * r.Rac;
+  return {
+    g, f, w, Bpk, Ipk, Irms, ...r, XL, Zs, Q: XL / r.Rac, Vpk: Ipk * Zs, Vrms: Irms * Zs,
+    P, S: Irms * Irms * XL, W: 0.5 * g.L * Ipk * Ipk, Cs, srf,
+    Zt: Math.hypot(Zt_re, Zt_im), phi: Math.atan2(Zt_im, Zt_re) * 180 / Math.PI,
+    Cres: 1 / (w * w * g.L),
+    wheeler: wheelerL(g.aMean, p.len, g.Nt)
+  };
+}
+function wheelerL(a, len, N) { // inches formula, returns H
+  const r = a / 0.0254, l = len / 0.0254;
+  return r * r * N * N / (9 * r + 10 * l) * 1e-6;
+}
+
+function cooling(p, e) {
+  const g = e.g, A = Math.PI * (2 * p.Ri + g.Dout) * p.len;
+  const out = { A, q: e.P / A, dTnat: e.P / (10 * A), dTfan: e.P / (40 * A) };
+  if (p.type === "tube" && p.cool === "water") {
+    const ID = p.OD - 2 * Math.min(p.wall, p.OD / 2);
+    out.ID = ID;
+    if (ID > 0) {
+      const rhoW = 997, cp = 4180, mu = 8.9e-4, kw = 0.6, Pr = 6.1;
+      const Qv = e.P / (rhoW * cp * p.dTw);
+      const Ax = Math.PI * ID * ID / 4, v = Qv / Ax, Re = rhoW * v * ID / mu;
+      const fr = Re < 2300 ? 64 / Math.max(Re, 1) : Math.pow(-1.8 * Math.log10(6.9 / Re), -2);
+      const dp = fr * (g.lw / ID) * rhoW * v * v / 2;
+      const Nu = Re < 2300 ? 4.36 : 0.023 * Math.pow(Re, 0.8) * Math.pow(Pr, 0.4);
+      const hw = Nu * kw / ID;
+      Object.assign(out, { Qv, v, Re, dp, hw, dTwall: e.P / (hw * Math.PI * ID * g.lw) });
+      // flow giving turbulent regime (Re = 4000)
+      out.QturbLpm = 4000 * mu / (rhoW * ID) * Ax * 6e4;
+    }
+  }
+  const lim = p.dTmax;
+  out.hReq = e.P / (A * lim);
+  out.water = p.cool === "water" && p.type === "tube" && out.dTwall != null;
+  out.method = { nat: "Doğal hava", fan: "Fanlı hava", water: "Su soğutma" }[p.cool];
+  // coil rise above ambient / inlet water (water: wall-to-water plus outlet water rise)
+  out.dT = p.cool === "nat" ? out.dTnat : p.cool === "fan" ? out.dTfan : out.water ? out.dTwall + p.dTw : NaN;
+  out.ok = out.dT <= lim;
+  out.level = out.ok ? "good" : "crit";
+  out.label = out.method + (out.ok ? " yeterli" : " yetersiz");
+  out.suggest = out.dTnat <= lim ? "nat" : out.dTfan <= lim ? "fan" : p.type === "tube" ? "water" : null;
+  return out;
+}
+
+/* ---------- field map ---------- */
+function fieldMap(p, g) {
+  const nr = 34, nz = 44, Ri = p.Ri, hz = p.len / 2;
+  const b0 = g.b0, dev = [];
+  let vol = 0, v1 = 0, v5 = 0, v10 = 0;
+  for (let i = 0; i < nr; i++) {
+    const r = (i + 0.5) * Ri / nr, row = [];
+    for (let j = 0; j < nz; j++) {
+      const z = (j + 0.5) * hz / nz;
+      const [br, bz] = fieldAt(g.turns, r, z);
+      const dv = Math.hypot(br, bz) / b0 - 1;
+      row.push(dv);
+      const w = r; vol += w;
+      const a = Math.abs(dv);
+      if (a <= 0.01) v1 += w; if (a <= 0.05) v5 += w; if (a <= 0.10) v10 += w;
+    }
+    dev.push(row);
+  }
+  return { nr, nz, dev, f1: v1 / vol, f5: v5 / vol, f10: v10 / vol };
+}
+function roiDev(p, g, n = 14) {
+  const R = Math.min(p.roiD / 2, p.Ri), H = Math.min(p.roiL / 2, p.len / 2);
+  let mx = 0, mn = 0;
+  for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
+    const [br, bz] = fieldAt(g.turns, R * i / n, H * j / n);
+    const d = Math.hypot(br, bz) / g.b0 - 1;
+    if (d > mx) mx = d; if (d < mn) mn = d;
+  }
+  return { mx, mn, span: mx - mn, R, H };
+}
+function axialProfile(p, g) {
+  const n = 161, zmax = 0.75 * p.len, xs = [], ys = [];
+  for (let i = 0; i < n; i++) {
+    const z = -zmax + 2 * zmax * i / (n - 1);
+    xs.push(z); ys.push(fieldAt(g.turns, 0, z)[1] / g.b0);
+  }
+  // half-lengths within tolerance (scan from center outwards)
+  const lim = tol => { let z = 0; const dz = p.len / 2000;
+    while (z < zmax) { const v = fieldAt(g.turns, 0, z + dz)[1] / g.b0; if (Math.abs(v - 1) > tol) break; z += dz; } return 2 * z; };
+  return { xs, ys, l1: lim(0.01), l5: lim(0.05) };
+}
+function radialProfile(p, g, zs) {
+  const n = 81, xs = [], ys = zs.map(() => []);
+  for (let i = 0; i < n; i++) {
+    const r = p.Ri * i / (n - 1); xs.push(r);
+    zs.forEach((z, k) => { const [br, bz] = fieldAt(g.turns, r, z); ys[k].push(Math.hypot(br, bz) / g.b0); });
+  }
+  return { xs, ys };
+}
+
+/* ---------- charts ---------- */
+function niceTicks(min, max, n = 5) {
+  if (!(max > min)) { max = min + 1; }
+  const span = max - min, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const err = step0 / mag, step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+  const t = [];
+  for (let v = Math.ceil(min / step - 1e-9) * step; v <= max + step * 1e-9; v += step) t.push(Math.abs(v) < step * 1e-9 ? 0 : v);
+  return t;
+}
+function lineChart(box, o) {
+  const W = 640, H = 270, ml = 62, mr = 18, mt = 12, mb = 42;
+  const xs = o.x;
+  let ymin = Infinity, ymax = -Infinity;
+  o.series.forEach(s => s.y.forEach(v => { if (isFinite(v)) { ymin = Math.min(ymin, v); ymax = Math.max(ymax, v); } }));
+  if (o.refY != null) { ymin = Math.min(ymin, o.refY); ymax = Math.max(ymax, o.refY); }
+  if (o.y0) ymin = Math.min(0, ymin);
+  const pad = (ymax - ymin) * 0.08 || Math.abs(ymax) * 0.05 || 1;
+  ymax += pad; if (!o.y0) ymin -= pad;
+  const xmin = xs[0], xmax = xs[xs.length - 1];
+  const yt = niceTicks(ymin, ymax, 5); ymin = Math.min(ymin, yt[0]); ymax = Math.max(ymax, yt[yt.length - 1]);
+  const X = v => ml + (v - xmin) / (xmax - xmin) * (W - ml - mr);
+  const Y = v => mt + (1 - (v - ymin) / (ymax - ymin)) * (H - mt - mb);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria || ""}">`;
+  if (o.band) s += `<rect class="band" x="${X(o.band[0])}" y="${mt}" width="${X(o.band[1]) - X(o.band[0])}" height="${H - mt - mb}"/>`;
+  yt.forEach(v => { s += `<line class="grid" x1="${ml}" x2="${W - mr}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${ml - 8}" y="${Y(v) + 4}" text-anchor="end">${o.fy(v)}</text>`; });
+  niceTicks(xmin, xmax, 6).forEach(v => { if (v >= xmin - 1e-12 && v <= xmax + 1e-12) s += `<text x="${X(v)}" y="${H - mb + 16}" text-anchor="middle">${o.fx(v)}</text>`; });
+  s += `<line class="base" x1="${ml}" x2="${W - mr}" y1="${H - mb}" y2="${H - mb}"/>`;
+  if (o.refY != null) s += `<line class="ref" x1="${ml}" x2="${W - mr}" y1="${Y(o.refY)}" y2="${Y(o.refY)}"/>`;
+  o.series.forEach((se, k) => {
+    let d = "", pen = false;
+    se.y.forEach((v, i) => { if (!isFinite(v)) { pen = false; return; } d += (pen ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(v).toFixed(1); pen = true; });
+    s += `<path class="s${k + 1}" d="${d}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  });
+  if (o.mark && isFinite(o.mark[1])) s += `<circle class="mark" r="5" cx="${X(o.mark[0])}" cy="${Y(o.mark[1])}"/>`;
+  s += `<text class="axl" x="${(ml + W - mr) / 2}" y="${H - 6}" text-anchor="middle">${o.xLabel}</text>`;
+  s += `<text class="axl" transform="translate(14 ${(mt + H - mb) / 2}) rotate(-90)" text-anchor="middle">${o.yLabel}</text>`;
+  s += `<g class="hov" visibility="hidden"><line class="cross" y1="${mt}" y2="${H - mb}"/>${o.series.map((_, k) => `<circle class="dot${k + 1}" r="4.5"/>`).join("")}</g>`;
+  s += `<rect x="${ml}" y="${mt}" width="${W - ml - mr}" height="${H - mt - mb}" fill="transparent" class="hit"/></svg>`;
+  box.innerHTML = s + `<div class="tip" hidden></div>`;
+  box.style.position = "relative";
+  const svg = box.querySelector("svg"), hov = svg.querySelector(".hov"), tip = box.querySelector(".tip"), hit = svg.querySelector(".hit");
+  const move = ev => {
+    const rc = svg.getBoundingClientRect(), sx = (ev.clientX - rc.left) / rc.width * W;
+    const xv = xmin + (sx - ml) / (W - ml - mr) * (xmax - xmin);
+    let bi = 0, bd = Infinity; xs.forEach((x, i) => { const d = Math.abs(x - xv); if (d < bd) { bd = d; bi = i; } });
+    const cx = X(xs[bi]);
+    hov.setAttribute("visibility", "visible");
+    const ln = hov.querySelector("line"); ln.setAttribute("x1", cx); ln.setAttribute("x2", cx);
+    const lines = [`<div>${o.xName}: ${o.fx(xs[bi], true)}</div>`];
+    o.series.forEach((se, k) => {
+      const c = hov.querySelectorAll("circle")[k], v = se.y[bi];
+      if (isFinite(v)) { c.setAttribute("cx", cx); c.setAttribute("cy", Y(v)); c.setAttribute("visibility", "visible"); }
+      else c.setAttribute("visibility", "hidden");
+      lines.push(`<div>${se.name}: <b>${o.fy(v, true)}</b></div>`);
+    });
+    tip.innerHTML = lines.join("");
+    tip.hidden = false;
+    const bx = box.getBoundingClientRect(), px = ev.clientX - bx.left, py = ev.clientY - bx.top;
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.min(Math.max(0, px + 12), bx.width - tw) + "px";
+    tip.style.top = Math.max(0, py - 48) + "px";
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerdown", move);
+  hit.addEventListener("pointerleave", () => { hov.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+
+/* deviation bands for the heat map: sequential blue ramp */
+const BANDS = [
+  { lim: 0.005, c: "#cde2fb", t: "≤ 0,5 %" },
+  { lim: 0.01, c: "#9ec5f4", t: "≤ 1 %" },
+  { lim: 0.02, c: "#6da7ec", t: "≤ 2 %" },
+  { lim: 0.05, c: "#3987e5", t: "≤ 5 %" },
+  { lim: 0.10, c: "#1c5cab", t: "≤ 10 %" },
+  { lim: Infinity, c: "#0d366b", t: "> 10 %" }
+];
+const bandColor = d => { const a = Math.abs(d); for (const b of BANDS) if (a <= b.lim) return b.c; };
+$("heatLegend").innerHTML = BANDS.map(b => `<span><i style="background:${b.c}"></i>${b.t}</span>`).join("") + `<span><i style="background:var(--copper)"></i>İletken</span>`;
+
+let heatState = null;
+function drawHeat() {
+  if (!heatState) return;
+  const { p, g, map, roi } = heatState;
+  const cv = $("heat"), css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+  const W = cv.clientWidth || 600;
+  const zr = p.len / 2 + g.d * 1.5 + p.len * 0.04, rr = g.Dout / 2 + g.d * 0.6;
+  const mL = 8, mB = 22;
+  let s = (W - 2 * mL) / (2 * zr);
+  let H = 2 * rr * s + mB + 8;
+  if (H > 520) { s = (520 - mB - 8) / (2 * rr); H = 520; }
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + "px";
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = col("--panel"); c.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = 8 + rr * s;
+  const PX = z => cx + z * s, PY = r => cy - r * s;
+  heatState.tf = { cx, cy, s };
+  // bore outline background
+  c.fillStyle = col("--line-soft");
+  c.fillRect(PX(-p.len / 2), PY(p.Ri), p.len * s, 2 * p.Ri * s);
+  const dr = p.Ri / map.nr, dz = (p.len / 2) / map.nz;
+  for (let i = 0; i < map.nr; i++) for (let j = 0; j < map.nz; j++) {
+    c.fillStyle = bandColor(map.dev[i][j]);
+    const r0 = i * dr, z0 = j * dz, w = dz * s + 0.6, h = dr * s + 0.6;
+    for (const sz of [1, -1]) for (const sr of [1, -1]) {
+      const x = sz > 0 ? PX(z0) : PX(-z0 - dz), y = sr > 0 ? PY(r0 + dr) : PY(-r0);
+      c.fillRect(x, y, w, h);
+    }
+  }
+  // axis line
+  c.strokeStyle = col("--ink-2"); c.setLineDash([2, 4]); c.lineWidth = 1;
+  c.beginPath(); c.moveTo(PX(-zr), cy); c.lineTo(PX(zr), cy); c.stroke();
+  // ROI
+  c.setLineDash([6, 4]); c.strokeStyle = col("--ink"); c.lineWidth = 1.5;
+  c.strokeRect(PX(-roi.H), PY(roi.R), 2 * roi.H * s, 2 * roi.R * s);
+  c.setLineDash([]);
+  // conductors
+  const cu = col("--copper"), pnl = col("--panel");
+  for (const t of g.turns) for (const sr of [1, -1]) {
+    c.beginPath(); c.arc(PX(t.z), PY(sr * t.a), Math.max(1, g.d / 2 * s), 0, 2 * Math.PI);
+    c.fillStyle = cu; c.fill();
+    if (p.type === "tube") {
+      const ri = (p.OD / 2 - p.wall) * s;
+      if (ri > 0.8) { c.beginPath(); c.arc(PX(t.z), PY(sr * t.a), ri, 0, 2 * Math.PI); c.fillStyle = pnl; c.fill(); }
+    }
+  }
+  // z ticks
+  c.fillStyle = col("--muted"); c.font = "11px " + col("--f-mono"); c.textAlign = "center";
+  niceTicks(-p.len / 2 * 1000, p.len / 2 * 1000, 6).forEach(v => {
+    const x = PX(v / 1000); if (x < 12 || x > W - 12) return;
+    c.fillText(dec(v, 3) + (v === 0 ? " mm" : ""), x, H - 6);
+  });
+}
+$("heat").addEventListener("pointermove", ev => {
+  if (!heatState || !heatState.tf) return;
+  const { p, g } = heatState, { cx, cy, s } = heatState.tf;
+  const rc = $("heat").getBoundingClientRect();
+  const z = (ev.clientX - rc.left - cx) / s, r = Math.abs((ev.clientY - rc.top - cy) / s);
+  if (Math.abs(z) > p.len / 2 || r > p.Ri) { $("heatRead").textContent = "Boşluk dışında."; return; }
+  const [br, bz] = fieldAt(g.turns, r, z);
+  const Bm = Math.hypot(br, bz), e = heatState.e;
+  $("heatRead").textContent = `z = ${dec(z * 1000, 3)} mm, r = ${dec(r * 1000, 3)} mm  ·  |B| = ${dec(Bm * e.Ipk * 1000, 4)} mT, |H| = ${dec(Bm * e.Ipk / MU0 / 1000, 4)} kA/m (tepe)  ·  sapma ${pct(Bm / g.b0 - 1, 3)}  ·  Br/Bz = ${pct(br / bz, 2)}`;
+});
+
+/* ---------- UI wiring ---------- */
+let Bmode = "pk", Bunit = "mT", ec = false;
+function readParams() {
+  const v = id => parseFloat($(id).value);
+  return {
+    Ri: v("Di") / 2000, len: v("len") / 1000, B: Bunit === "mT" ? v("B") / 1000 : v("B") * 1000 * MU0, Bmode, f: v("f") * 1000, T: v("T"),
+    N: Math.round(v("N")), layers: Math.max(1, Math.round(v("layers"))), type: $("type").value,
+    OD: v("OD") / 1000, wall: v("wall") / 1000, dS: v("dS") / 1000,
+    ds: v("ds") / 1000, ns: Math.round(v("ns")), dL: v("dL") / 1000,
+    ec, ne: Math.round(v("ne")), ke: v("ke"),
+    roiD: v("roiD") / 1000, roiL: v("roiL") / 1000, dTw: v("dTw"), dTmax: v("dTmax"), cool: $("cool").value
+  };
+}
+function validate(p) {
+  const bad = Object.entries(p).filter(([k, x]) => typeof x === "number" && !isFinite(x));
+  if (bad.length) return "Tüm alanlara sayı girin.";
+  if (p.Ri <= 0 || p.len <= 0 || p.B <= 0 || p.f <= 0 || p.N < 1) return "Çap, uzunluk, alan, frekans ve tur sayısı pozitif olmalı.";
+  const d = condOD(p);
+  if (d <= 0) return "İletken çapı pozitif olmalı.";
+  if (p.ec) {
+    if (p.ne < 1 || 2 * p.ne >= p.N) return `Uç sıklaştırma için her uçtaki tur sayısı 1 ile ${Math.max(1, Math.floor((p.N - 1) / 2))} arasında olmalı (toplam ${p.N} tur).`;
+    if (!(p.ke > 0 && p.ke <= 1)) return "Uç adımı / orta adım oranı 0 ile 1 arasında olmalı.";
+    const pe = segments(p)[0].pitch;
+    if (d > pe * 1.0001) return `Uçtaki adım (${dec(pe * 1000)} mm) iletken çapından (${dec(d * 1000)} mm) küçük. Oranı büyütün veya tur sayısını azaltın.`;
+  }
+  if (d > p.len / p.N * 1.0001) return `Bu iletken ${p.N} turla sığmıyor: adım ${dec(p.len / p.N * 1000)} mm, iletken ${dec(d * 1000)} mm. En fazla ${Math.floor(p.len / d)} tur.`;
+  if (p.type === "tube" && p.wall * 2 >= p.OD) return "Et kalınlığı boru yarıçapından küçük olmalı (dolu iletken için ‘Dolu bakır tel’ seçin).";
+  if (p.type === "litz" && p.ns * p.ds * p.ds > p.dL * p.dL) return "Litz damarları belirtilen demet çapına sığmıyor. Demet çapını büyütün veya damar sayısını azaltın.";
+  if (p.N * p.layers > 1500) return "Toplam tur sayısı 1500’ü geçmemeli.";
+  return null;
+}
+function kv(rows) {
+  return rows.map(([k, v, s]) => `<tr><td class="k">${k}${s ? `<small>${s}</small>` : ""}</td><td class="v">${v}</td></tr>`).join("");
+}
+
+let timer = null, sweepTimer = null, cur = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(run, 40); }
+
+function run() {
+  const p = readParams(), err = validate(p);
+  $("err").hidden = !err; $("err").textContent = err || "";
+  if (err) return;
+  const e = evaluate(p), g = e.g, cool = cooling(p, e);
+  cur = { p, e };
+
+  // tiles
+  const kind = p.Bmode === "pk" ? "tepe" : "rms";
+  $("Bconv").textContent = Bunit === "mT"
+    ? `= ${dec(p.B / MU0 / 1000, 3)} kA/m (${kind}, havada H = B/µ₀)`
+    : `= ${dec(p.B * 1000, 3)} mT (${kind}, havada B = µ₀H)`;
+  $("t-I").textContent = si(e.Ipk, "A") + " tepe";
+  $("t-I2").textContent = si(e.Irms, "A") + " rms";
+  $("t-V").textContent = si(e.Vpk, "V") + " tepe";
+  $("t-V2").textContent = si(e.Vrms, "V") + " rms";
+  $("t-Z").textContent = si(e.Zs, "Ω");
+  $("t-Z2").textContent = `${si(e.Rac, "Ω")} + j${si(e.XL, "Ω")}`;
+  $("t-P").textContent = si(e.P, "W");
+  $("t-P2").textContent = "reaktif " + si(e.S, "VAr");
+  $("t-L").textContent = si(g.L, "H");
+  $("t-L2").textContent = "Wheeler " + si(e.wheeler, "H");
+  $("t-R").textContent = si(e.Rac, "Ω");
+  $("t-R2").textContent = `Q = ${dec(e.Q, 3)} · Rac/Rdc ${dec(e.FR, 3)}`;
+
+  // field
+  const map = fieldMap(p, g), roi = roiDev(p, g);
+  heatState = { p, g, map, roi, e };
+  drawHeat();
+  $("t-U").textContent = "±" + pct(Math.max(roi.mx, -roi.mn), 2);
+  $("t-U2").textContent = `Ø${dec(roi.R * 2000)} × ${dec(roi.H * 2000)} mm bölge`;
+  const ax = axialProfile(p, g);
+  const rDev = r => { const [br, bz] = fieldAt(g.turns, r, 0); return Math.hypot(br, bz) / g.b0 - 1; };
+  const endDev = fieldAt(g.turns, 0, p.len / 2)[1] / g.b0 - 1;
+  $("umetrics").innerHTML = [
+    ["Eksende ±1 % uzunluk", dec(ax.l1 * 1000, 3) + " mm", `sargının ${pct(ax.l1 / p.len, 2)}’i`],
+    ["Eksende ±5 % uzunluk", dec(ax.l5 * 1000, 3) + " mm", `sargının ${pct(ax.l5 / p.len, 2)}’i`],
+    ["Uçta eksen alanı", pct(endDev, 3), "z = ±ℓ/2, merkeze göre"],
+    ["r = R/2 sapma (z=0)", pct(rDev(p.Ri / 2), 2), "radyal, orta düzlem"],
+    ["r = 0,9R sapma (z=0)", pct(rDev(p.Ri * 0.9), 2), "sarım dalgalanması dahil"],
+    ["Hacimde ±1 / ±5 / ±10 %", `${pct(map.f1, 2)} / ${pct(map.f5, 2)} / ${pct(map.f10, 2)}`, "iç hacmin oranı"]
+  ].map(([l, v, s]) => `<div class="metric"><div class="lab">${l}</div><div class="val">${v}</div><div class="lab">${s}</div></div>`).join("");
+
+  renderEC(p, e, g, roi, ax);
+  lineChart($("chAx"), {
+    x: ax.xs.map(z => z * 1000), series: [{ name: "Bz/B₀", y: ax.ys }],
+    band: [-p.len / 2 * 1000, p.len / 2 * 1000], refY: 1, y0: true,
+    fx: v => dec(v, 3), fy: (v, t) => t ? pct(v, 4) : dec(v * 100, 3),
+    xLabel: "z (mm)", yLabel: "B / B₀ (%)", xName: "z (mm)", aria: "Eksen boyunca alan profili"
+  });
+  const zEdge = Math.min(roi.H, p.len / 2);
+  const rp = radialProfile(p, g, [0, zEdge]);
+  lineChart($("chRad"), {
+    x: rp.xs.map(r => r * 1000),
+    series: [{ name: "z = 0", y: rp.ys[0] }, { name: `z = ${dec(zEdge * 1000, 3)} mm`, y: rp.ys[1] }],
+    refY: 1, fx: v => dec(v, 3), fy: (v, t) => t ? pct(v, 4) : dec(v * 100, 3),
+    xLabel: "r (mm)", yLabel: "|B| / B₀ (%)", xName: "r (mm)", aria: "Radyal alan profili"
+  });
+  $("radLegend").innerHTML = `<span><i class="ln" style="background:var(--series-1)"></i>z = 0 (orta düzlem)</span><span><i class="ln" style="background:var(--series-2)"></i>z = ${dec(zEdge * 1000, 3)} mm (bölge ucu)</span>`;
+
+  // impedance table
+  const srfWarn = e.f > 0.3 * e.srf ? ` <span class="pill ${e.f > 0.6 * e.srf ? "crit" : "warn"}">rezonansa yakın</span>` : "";
+  $("tbZ").innerHTML = kv([
+    ["Endüktans L", si(g.L, "H"), "halka toplamı (Wheeler: " + si(e.wheeler, "H") + ")"],
+    ["Reaktans X<sub>L</sub>", si(e.XL, "Ω")],
+    ["AC direnç R<sub>ac</sub>", si(e.Rac, "Ω"), "DC: " + si(e.Rdc, "Ω")],
+    ["Seri empedans |Z|", si(e.Zs, "Ω"), "faz " + dec(Math.atan2(e.XL, e.Rac) * 180 / Math.PI, 4) + "°"],
+    ["Uç empedansı (öz kapasite ile)", si(e.Zt, "Ω"), "faz " + dec(e.phi, 4) + "°"],
+    ["Kalite faktörü Q", dec(e.Q, 3)],
+    ["Öz kapasite / öz rezonans", si(e.Cs, "F") + " / " + si(e.srf, "Hz") + srfWarn],
+    ["Akım (tepe / rms)", si(e.Ipk, "A") + " / " + si(e.Irms, "A")],
+    ["Gerilim (tepe / rms)", si(e.Vpk, "V") + " / " + si(e.Vrms, "V")],
+    ["Kayıp güç P", si(e.P, "W")],
+    ["Reaktif güç", si(e.S, "VAr"), "tank kapasitörü bu gücü taşır"],
+    ["Rezonans kapasitesi", si(e.Cres, "F"), "seri/paralel tank, " + si(e.f, "Hz")],
+    ["Depolanan enerji (tepe)", si(e.W, "J")],
+    ["Merkez alan (tepe)", `${dec(e.Bpk * 1000, 3)} mT · ${dec(e.Bpk / MU0 / 1000, 3)} kA/m`],
+    ["Merkez alan / akım", si(g.b0, "T/A") + " · " + dec(g.b0 / MU0, 3) + " A/m/A"]
+  ]);
+
+  // conductor table
+  const d = g.d, delta = e.delta;
+  const rows = [
+    ["Akım derinliği δ", si(delta, "m"), `bakır, ${dec(p.T, 3)} °C, ${si(e.f, "Hz")}`],
+    ...(g.segs.length > 1
+      ? [["Adım: orta / uç", `${dec(g.pMax * 1000)} / ${dec(g.pMin * 1000)} mm`, `uçta boşluk ${dec((g.pMin - d) * 1000)} mm, doluluk ${pct(d / g.pMin, 2)}`]]
+      : [["Tur adımı / boşluk", `${dec(g.pitch * 1000)} / ${dec((g.pitch - d) * 1000)} mm`, `doluluk ${pct(d / g.pitch, 2)}`]]),
+    ["Radyal sargı kalınlığı", dec(p.layers * d * 1000) + " mm", `${p.layers} katman × ${dec(d * 1000)} mm`],
+    ["Sargı dış çapı", dec(g.Dout * 1000, 4) + " mm"],
+    ["Toplam tur", String(g.Nt)],
+    ["İletken uzunluğu", dec(g.lw, 3) + " m", "bağlantı uçları hariç"]
+  ];
+  let cuArea;
+  if (p.type === "tube") { cuArea = Math.PI * (p.OD ** 2 - (p.OD - 2 * p.wall) ** 2) / 4; rows.push(["Et kalınlığı / δ", dec(p.wall / delta, 3)]); }
+  else if (p.type === "solid") { cuArea = Math.PI * p.dS ** 2 / 4; rows.push(["Tel çapı / δ", dec(p.dS / delta, 3)]); }
+  else { cuArea = p.ns * Math.PI * p.ds ** 2 / 4; rows.push(["Damar çapı / δ", dec(p.ds / delta, 3)], ["Bakır doluluk (demet)", pct(e.fill, 2)], ["Yakınlık direnci", si(e.Rprox, "Ω")]); }
+  rows.push(["Bakır kesiti", dec(cuArea * 1e6, 3) + " mm²"], ["Bakır kütlesi", (cuArea * g.lw * 8960 >= 1 ? dec(cuArea * g.lw * 8960, 3) + " kg" : dec(cuArea * g.lw * 8960e3, 3) + " g")],
+    ["Yüzey akım yükü N·I/ℓ", dec(g.Nt * e.Irms / p.len / 1000, 3) + " A/mm", "rms"],
+    ["Rac / Rdc", dec(e.FR, 3)]);
+  $("tbC").innerHTML = kv(rows);
+  const recs = [];
+  if (p.type === "tube") {
+    recs.push(`Akım yalnızca iç yüze bakan yaklaşık ${dec(delta * 1000, 2)} mm’lik katmanda akar. Et kalınlığı için ${dec(3 * delta * 1000, 2)} mm (3δ) yeterlidir; daha kalın et AC direnci düşürmez, yalnızca su kesitini daraltır.`);
+    if (e.thin) recs.push("Et kalınlığı 2δ’den ince: AC direnç belirgin artar, et kalınlığını artırın.");
+  } else if (p.type === "solid") {
+    recs.push(`Dolu telde yalnızca ~${dec(delta * 1000, 2)} mm’lik kabuk iletir. ${dec(3 * delta * 1000, 2)} mm’den kalın çekirdek akım taşımaz; aynı dış çapta boru kullanmak hem malzemeyi azaltır hem de su soğutmaya izin verir.`);
+  } else {
+    recs.push(`Litz damarı δ’dan küçük olmalı (şu an ${dec(p.ds / delta, 2)}δ). Bu frekansta ${dec(delta * 1000 / 2, 2)} mm civarı damar uygundur.`);
+    if (e.strandBig) recs.push("Damar çapı δ’dan büyük: litz avantajı kayboluyor, daha ince damar seçin.");
+  }
+  if (g.pMin - d < 0.5e-3 && p.type !== "litz") recs.push("Turlar arası boşluk 0,5 mm’nin altında: tur gerilimi " + si(e.Vpk / g.Nt, "V") + " tepe, yalıtım gerekir.");
+  $("recC").textContent = recs.join(" ");
+
+  // cooling
+  $("t-C").textContent = cool.label;
+  $("t-C").style.color = `var(--${cool.level})`;
+  $("t-C2").textContent = `sargı ΔT ≈ ${dec(cool.dT, 2)} K`;
+  $("coolPill").className = "pill " + cool.level; $("coolPill").textContent = cool.label;
+  $("tbAir").innerHTML = kv([
+    ["Kayıp güç", si(e.P, "W")],
+    ["Isı yayan yüzey", dec(cool.A * 1e4, 3) + " cm²", "sargının iç + dış yüzeyi"],
+    ["Yüzey ısı akısı", dec(cool.q / 1e4, 3) + " W/cm²"],
+    ["Doğal hava ΔT", dec(cool.dTnat, 3) + " K", "h ≈ 10 W/m²K"],
+    ["Fanlı hava ΔT", dec(cool.dTfan, 3) + " K", "h ≈ 40 W/m²K"],
+    ["Hava ile gereken h", dec(cool.hReq, 3) + " W/m²K", `${dec(p.dTmax, 2)} K sınırı için`]
+  ]);
+  if (cool.water && cool.Qv) {
+    $("tbWater").innerHTML = kv([
+      ["Gerekli su debisi", dec(cool.Qv * 6e4, 3) + " L/dk", `ΔT su = ${dec(p.dTw, 3)} K`],
+      ["Boru iç çapı", dec(cool.ID * 1000, 3) + " mm"],
+      ["Su hızı", dec(cool.v, 3) + " m/s"],
+      ["Reynolds sayısı", dec(cool.Re, 3), cool.Re < 2300 ? "laminer" : cool.Re < 4000 ? "geçiş" : "türbülanslı"],
+      ["Basınç düşümü", si(cool.dp, "Pa"), dec(cool.dp / 1e5, 3) + " bar"],
+      ["Duvar–su sıcaklık farkı", dec(cool.dTwall, 3) + " K"],
+      ["Türbülans için debi", dec(cool.QturbLpm, 3) + " L/dk", "Re = 4000"]
+    ]);
+  } else {
+    $("tbWater").innerHTML = kv([["Su soğutma", "seçilmedi", p.type === "tube" ? "Soğutma yöntemi olarak ‘Su (boru içi)’ seçilirse hesaplanır" : "Yalnızca bakır boru iletkenle kullanılabilir"]]);
+  }
+  const cr = [], names = { nat: "doğal hava", fan: "fanlı hava", water: "boru içi su" };
+  if (cool.ok) {
+    cr.push(`${cool.method} ile sargı yaklaşık ${dec(cool.dT, 2)} K ısınır; ${dec(p.dTmax, 2)} K sınırının altında.`);
+    if (p.cool !== "nat" && cool.suggest === "nat") cr.push("Doğal hava da yeterli olur.");
+    else if (p.cool === "water" && cool.suggest === "fan") cr.push("Fanlı hava da yeterli olur.");
+  } else {
+    cr.push(`${cool.method} ile sargı yaklaşık ${dec(cool.dT, 2)} K ısınır; ${dec(p.dTmax, 2)} K sınırı aşılıyor.`);
+    if (cool.suggest && cool.suggest !== p.cool) cr.push(`${names[cool.suggest][0].toLocaleUpperCase("tr")}${names[cool.suggest].slice(1)} yeterli olur.`);
+    else if (!cool.suggest) cr.push(`Hava ile yetmiyor: kaybı azaltın (daha kalın iletken, litz, daha düşük alan veya frekans) ya da bakır boru ile su soğutma kullanın. Hava için h ≈ ${dec(cool.hReq, 2)} W/m²K gerekir.`);
+  }
+  if (cool.water && cool.Qv) cr.push(`Isıyı taşımak için ${dec(cool.Qv * 6e4, 2)} L/dk yeterli; iyi ısı geçişi için türbülanslı akış (≥ ${dec(cool.QturbLpm, 2)} L/dk) önerilir.`);
+  $("recCool").textContent = cr.join(" ");
+
+  clearTimeout(sweepTimer); sweepTimer = setTimeout(runSweep, 30);
+}
+
+function runSweep() {
+  if (!cur) return;
+  const { p, e } = cur, sx = $("sx").value, sy = $("sy").value;
+  const dOpt = $("sx").querySelector('option[value="d"]');
+  dOpt.disabled = p.type === "litz";
+  if (sx === "d" && p.type === "litz") { $("sx").value = "f"; return runSweep(); }
+  const pick = r => ({ P: r.P, V: r.Vpk, I: r.Ipk, Z: r.Zs, Q: r.Q, R: r.Rac })[sy];
+  const meta = {
+    P: ["Kayıp güç", "W"], V: ["Uç gerilimi", "V"], I: ["Akım", "A"], Z: ["|Z|", "Ω"], Q: ["Q", ""], R: ["AC direnç", "Ω"]
+  }[sy];
+  let xs = [], ys = [], xLabel, xName, fx, markX, xScale = 1;
+  if (sx === "f") {
+    for (let f = 100e3; f <= 500e3 + 1; f += 10e3) { xs.push(f / 1000); ys.push(pick(evaluate(p, f))); }
+    xLabel = "Frekans (kHz)"; xName = "f"; fx = v => dec(v, 3); markX = p.f / 1000;
+  } else if (sx === "N") {
+    const nmax = Math.min(Math.floor(p.len / condOD(p)), 200);
+    const step = Math.max(1, Math.ceil((nmax - 2) / 60));
+    for (let n = 2; n <= nmax; n += step) { xs.push(n); { const q = { ...p, N: n }; ys.push(validate(q) ? NaN : pick(evaluate(q))); } }
+    xLabel = "Tur sayısı (katman başına)"; xName = "N"; fx = v => dec(v, 3); markX = p.N;
+  } else {
+    const dmax = Math.min(p.len / p.N, 0.03);
+    const dmin = p.type === "tube" ? Math.max(2.2 * p.wall, 0.5e-3) : 0.3e-3;
+    for (let i = 0; i <= 40; i++) {
+      const d = dmin + (dmax - dmin) * i / 40;
+      const q = p.type === "tube" ? { ...p, OD: d } : { ...p, dS: d };
+      xs.push(d * 1000); ys.push(validate(q) ? NaN : pick(evaluate(q)));
+    }
+    xLabel = p.type === "tube" ? `Boru dış çapı (mm), et ${dec(p.wall * 1000)} mm` : "Tel çapı (mm)"; xName = "d"; fx = v => dec(v, 3);
+    markX = condOD(p) * 1000;
+  }
+  const u = meta[1];
+  lineChart($("chSw"), {
+    x: xs, series: [{ name: meta[0], y: ys }], y0: true,
+    mark: [markX, pick(e)],
+    fx, fy: (v, t) => u ? si(v, u, t ? 3 : 2) : dec(v, t ? 3 : 2),
+    xLabel, yLabel: meta[0] + (u ? ` (${u})` : ""), xName, aria: "Tarama grafiği"
+  });
+}
+
+/* ---------- end compensation ---------- */
+function renderEC(p, e, g, roi, ax) {
+  const box = $("ecCmp");
+  if (!p.ec) { box.hidden = true; $("ecInfo").textContent = ""; return; }
+  $("ecInfo").textContent = `Orta adım ${dec(g.pMax * 1000)} mm, uç adımı ${dec(g.pMin * 1000)} mm (iletken ${dec(g.d * 1000)} mm).`;
+  const q = { ...p, ec: false };
+  if (validate(q)) { box.hidden = true; return; }
+  const e0 = evaluate(q), g0 = e0.g, r0 = roiDev(q, g0), a0 = axialProfile(q, g0);
+  const m0 = Math.max(r0.mx, -r0.mn), m1 = Math.max(roi.mx, -roi.mn);
+  const row = (k, v0, v1, better) => `<tr><td class="k">${k}</td><td class="v">${v0}</td><td class="v">${v1}</td><td class="v">${better}</td></tr>`;
+  const chg = (a, b) => (b >= a ? "+" : "") + pct(b / a - 1, 2);
+  box.innerHTML = `<table class="kv"><thead><tr><th style="text-align:left">Karşılaştırma</th><th style="text-align:right">Eşit adım</th><th style="text-align:right">Uçlar sık</th><th style="text-align:right">Değişim</th></tr></thead><tbody>` +
+    row("Bölgede en büyük sapma", "±" + pct(m0, 2), "±" + pct(m1, 2), chg(m0, m1)) +
+    row("Eksende ±1 % uzunluk", dec(a0.l1 * 1000, 3) + " mm", dec(ax.l1 * 1000, 3) + " mm", chg(a0.l1, ax.l1)) +
+    row("Eksende ±5 % uzunluk", dec(a0.l5 * 1000, 3) + " mm", dec(ax.l5 * 1000, 3) + " mm", chg(a0.l5, ax.l5)) +
+    row("Akım (tepe)", si(e0.Ipk, "A"), si(e.Ipk, "A"), chg(e0.Ipk, e.Ipk)) +
+    row("Endüktans", si(g0.L, "H"), si(g.L, "H"), chg(g0.L, g.L)) +
+    row("Uç gerilimi (tepe)", si(e0.Vpk, "V"), si(e.Vpk, "V"), chg(e0.Vpk, e.Vpk)) +
+    row("Kayıp güç", si(e0.P, "W"), si(e.P, "W"), chg(e0.P, e.P)) +
+    `</tbody></table>`;
+  box.hidden = false;
+}
+// grid search over (ne, ke) minimizing max |deviation| in the evaluation region
+function optimizeEC() {
+  const p = readParams();
+  p.ec = true;
+  const d = condOD(p), best = { v: Infinity };
+  const neMax = Math.min(8, Math.floor((p.N - 1) / 2));
+  for (let ne = 1; ne <= neMax; ne++) {
+    const Nc = p.N - 2 * ne, kmin = Math.max(0.1, d * Nc / (p.len - 2 * ne * d));
+    if (!(kmin <= 1) || p.len - 2 * ne * d <= 0) continue;
+    for (let ke = Math.ceil(kmin * 100) / 100; ke <= 1.0001; ke += 0.02) {
+      const q = { ...p, ne, ke };
+      if (validate(q)) continue;
+      const g = buildGeo(q); g.b0 = fieldAt(g.turns, 0, 0)[1];
+      const r = roiDev(q, g, 8), v = Math.max(r.mx, -r.mn);
+      if (v < best.v) Object.assign(best, { v, ne, ke });
+    }
+  }
+  if (!isFinite(best.v)) { $("ecInfo").textContent = "Bu tur sayısı ve iletkenle uygun ayar bulunamadı."; return; }
+  $("ne").value = best.ne; $("ke").value = +best.ke.toFixed(2);
+  run();
+}
+function setEC(on) {
+  ec = on;
+  $("ecOn").setAttribute("aria-pressed", String(on)); $("ecOff").setAttribute("aria-pressed", String(!on));
+  $("g-ec").hidden = !on; $("g-ec").style.display = on ? "flex" : "";
+  schedule();
+}
+$("ecOn").addEventListener("click", () => setEC(true));
+$("ecOff").addEventListener("click", () => setEC(false));
+$("ecOpt").addEventListener("click", optimizeEC);
+
+/* ---------- self tests ---------- */
+// on-axis field of a finite current sheet (1 A/turn), closed form
+function sheetBz(N, a, len, z) {
+  const n = N / len, u = z + len / 2, v = z - len / 2;
+  return MU0 * n / 2 * (u / Math.hypot(u, a) - v / Math.hypot(v, a));
+}
+// Nagaoka coefficient, exact elliptic form (k^2 = D^2/(D^2+l^2))
+function nagaoka(D, len) {
+  const k2 = D * D / (D * D + len * len), k = Math.sqrt(k2), kp = Math.sqrt(1 - k2);
+  const [K, E] = ellipKE(k2);
+  return 4 / (3 * Math.PI * kp) * ((kp * kp / k2) * (K - E) + E - k);
+}
+// direct Biot-Savart of a polygonal loop, independent of the elliptic formulas
+function biotSavartLoop(a, r, z, nseg = 4000) {
+  let bx = 0, bz = 0;
+  for (let i = 0; i < nseg; i++) {
+    const p0 = 2 * Math.PI * i / nseg, p1 = 2 * Math.PI * (i + 1) / nseg, pm = (p0 + p1) / 2;
+    const dlx = a * (Math.cos(p1) - Math.cos(p0)), dly = a * (Math.sin(p1) - Math.sin(p0));
+    const rx = r - a * Math.cos(pm), ry = -a * Math.sin(pm), rz = z;
+    const R3 = Math.pow(rx * rx + ry * ry + rz * rz, 1.5);
+    bx += (dly * rz) / R3;               // (dl x R)_x, dl_z = 0
+    bz += (dlx * ry - dly * rx) / R3;    // (dl x R)_z
+  }
+  return [MU0 / (4 * Math.PI) * bx, MU0 / (4 * Math.PI) * bz];
+}
+// Neumann integral for coaxial loops
+function neumannM(a, b, d, n = 20000) {
+  let s = 0;
+  for (let i = 0; i < n; i++) { const ph = 2 * Math.PI * (i + 0.5) / n; s += Math.cos(ph) / Math.sqrt(a * a + b * b + d * d - 2 * a * b * Math.cos(ph)); }
+  return MU0 * a * b / 2 * s * 2 * Math.PI / n;
+}
+function solenoidTurns(N, a, len) {
+  const t = [], pitch = len / N;
+  for (let i = 0; i < N; i++) t.push({ a, z: -len / 2 + pitch * (i + 0.5) });
+  return t;
+}
+
+function selfTests() {
+  const T = [];
+  const add = (group, name, detail, ref, val, tol, fmt = v => dec(v, 5)) => {
+    const err = Math.abs(val - ref) / Math.max(Math.abs(ref), 1e-300);
+    T.push({ group, name, detail, ref: fmt(ref), val: fmt(val), err, tol, ok: err <= tol });
+  };
+  // 1. elliptic integrals
+  let [K, E] = ellipKE(0);
+  add("Matematik", "K(0) = E(0) = π/2", "eliptik integral, m = 0", Math.PI / 2, (K + E) / 2, 1e-12);
+  [K, E] = ellipKE(0.5);
+  add("Matematik", "K(m = 0,5)", "tablo: 1,854074677", 1.854074677, K, 1e-9);
+  add("Matematik", "E(m = 0,5)", "tablo: 1,350643881", 1.350643881, E, 1e-9);
+  // 2. loop field
+  const a = 0.04;
+  add("Alan", "Halka, eksen üzeri", "B = µ₀a²/2(a²+z²)^1,5, z = 3 cm", MU0 * a * a / (2 * Math.pow(a * a + 0.03 ** 2, 1.5)), loopB(a, 0.03, 0)[1], 1e-10, v => si(v, "T/A", 6));
+  const bs = biotSavartLoop(a, 0.03, 0.02), lb = loopB(a, 0.02, 0.03);
+  add("Alan", "Halka, eksen dışı Bz", "sayısal Biot–Savart, r = 3, z = 2 cm", bs[1], lb[1], 1e-5, v => si(v, "T/A", 6));
+  add("Alan", "Halka, eksen dışı Br", "sayısal Biot–Savart, r = 3, z = 2 cm", bs[0], lb[0], 1e-5, v => si(v, "T/A", 6));
+  // 3. solenoid fields
+  const Nl = 400, ll = 2.0, al = 0.02, tl = solenoidTurns(Nl, al, ll);
+  add("Alan", "Uzun solenoid merkezi", "ℓ/D = 50: B → µ₀nI", MU0 * Nl / ll, fieldAt(tl, 0, 0)[1], 1e-3, v => si(v, "T/A", 6));
+  const Bc = fieldAt(tl, 0, 0)[1], Bh = fieldAt(tl, al / 2, 0);
+  add("Alan", "Uzun solenoid radyal düzgünlük", "r = R/2’de B/B₀ = 1", 1, Math.hypot(Bh[0], Bh[1]) / Bc, 1e-3);
+  add("Alan", "Uzun solenoid uç alanı", "eksende z = ℓ/2: B → B₀/2", 0.5, fieldAt(tl, 0, ll / 2)[1] / Bc, 2e-3);
+  const N2 = 300, l2 = 0.15, a2 = 0.043, t2 = solenoidTurns(N2, a2, l2);
+  for (const z of [0, 0.04, 0.07]) {
+    add("Alan", `Sonlu solenoid, eksen z = ${dec(z * 100, 2)} cm`, "sürekli akım tabakası kapalı formu, N = 300", sheetBz(N2, a2, l2, z), fieldAt(t2, 0, z)[1], 2e-3, v => si(v, "T/A", 6));
+  }
+  // 4. inductance
+  add("Endüktans", "Eş eksenli halkalar M", "Neumann integrali, a = 4, b = 3, d = 2 cm", neumannM(0.04, 0.03, 0.02), mutual(0.04, 0.03, 0.02), 1e-6, v => si(v, "H", 6));
+  const dfar = 3.0;
+  add("Endüktans", "Uzak halkalar M (dipol)", "M → µ₀πa²b²/2d³, d = 3 m (dipol düzeltmesi ~4e-4)", MU0 * Math.PI * 0.04 ** 2 * 0.03 ** 2 / (2 * dfar ** 3), mutual(0.04, 0.03, dfar), 1e-3, v => si(v, "H", 6));
+  for (const [Nn, D, len] of [[200, 0.08, 0.2], [100, 0.08, 0.08], [60, 0.10, 0.03]]) {
+    const pitch = len / Nn, dw = 0.8 * pitch, aa = D / 2, tt = solenoidTurns(Nn, aa, len);
+    const Ls = nagaoka(D, len) * MU0 * Nn * Nn * Math.PI * aa * aa / len;
+    const rosa = MU0 * aa * Nn * ((1.25 - Math.log(2 * pitch / dw)) + 0.3365);
+    add("Endüktans", `Solenoid D/ℓ = ${dec(D / len, 3)}`, "Nagaoka (tam) + Rosa tel düzeltmesi", Ls - rosa, inductance(tt, dw / 2, 0.25), 1e-2, v => si(v, "H", 5));
+  }
+  const pg = { N: 15, ec: true, ne: 3, ke: 0.6, len: 0.15, Ri: 0.04, layers: 1, type: "solid", dS: 2e-3 }, gg = buildGeo(pg);
+  const span = gg.turns[gg.turns.length - 1].z + gg.pMin / 2 - (gg.turns[0].z - gg.pMin / 2);
+  add("Geometri", "Uç sıklaştırmada uzunluk korunur", "2·n·p_uç + N_orta·p_orta = ℓ", 0.15, span, 1e-12, v => dec(v * 1000, 6) + " mm");
+  const gs = buildGeo({ ...pg, ke: 1 }), gu = buildGeo({ ...pg, ec: false });
+  const dzMax = gs.turns.reduce((m, t, i) => Math.max(m, Math.abs(t.z - gu.turns[i].z)), 0);
+  add("Geometri", "Oran = 1 → eşit adım", "en büyük konum farkı / ℓ = 0", 1, 1 + dzMax / pg.len, 1e-12, v => (v - 1).toExponential(1));
+  // 5. resistance
+  const pr = { type: "solid", dS: 2e-3, layers: 1, T: 20, len: 0.15, N: 15 }, gr = { lw: 4, pitch: 0.01, d: 2e-3, Nt: 15, segs: [{ n: 15, pitch: 0.01 }] };
+  add("Direnç", "Düşük frekansta R → Rdc", "dolu tel, f = 1 Hz, ρℓ/A", 1.72e-8 * 4 / (Math.PI * 1e-6), resistance(pr, gr, 1).Rac, 1e-4, v => si(v, "Ω", 5));
+  add("Direnç", "Dowell, Δ ≫ 1, 1 katman", "F → Δ", 30, dowell(30, 1), 1e-6);
+  add("Direnç", "Dowell, Δ ≫ 1, 3 katman", "F → Δ(1 + 2(m²−1)/3)", 30 * (1 + 2 * 8 / 3), dowell(30, 3), 1e-6);
+  add("Direnç", "Dowell, Δ → 0", "F → 1", 1, dowell(0.01, 2), 1e-9);
+  const pl = { type: "litz", ds: 5e-5, ns: 100, dL: 1e-3, layers: 1, T: 20, len: 0.15, N: 15 };
+  add("Direnç", "Litz, düşük frekans", "Rdc = 1,03·ρℓ/(n·πd²/4)", 1.72e-8 * 4 * 1.03 / (100 * Math.PI * 2.5e-5 ** 2), resistance(pl, gr, 1).Rac, 1e-4, v => si(v, "Ω", 5));
+  // 6. coupling: requested field is reproduced
+  const pd = readParams();
+  if (!validate(pd)) {
+    const e = evaluate(pd);
+    add("Bütünlük", "Hedef alan geri elde edilir", "mevcut tasarım: I·B(0,0)/I = B hedef", e.Bpk, e.Ipk * fieldAt(e.g.turns, 0, 0)[1], 1e-9, v => si(v, "T", 6));
+  }
+  add("Bütünlük", "Birim dönüşümü", "1 mT = 795,775 A/m", 795.7747, 1e-3 / MU0, 1e-6);
+  // 7. hydraulics: laminar Darcy vs Hagen-Poiseuille
+  const pw = { P: 50 }, pc = { type: "tube", OD: 6e-3, wall: 1e-3, Ri: 0.04, len: 0.15, dTw: 10, dTmax: 40, cool: "water" };
+  const ew = { P: 50, g: { lw: 4, Dout: 0.092 } }, cw = cooling(pc, ew);
+  const IDw = 4e-3, Qv = 50 / (997 * 4180 * 10);
+  add("Soğutma", "Laminer basınç düşümü", "Hagen–Poiseuille: 128µLQ/πD⁴", 128 * 8.9e-4 * 4 * Qv / (Math.PI * IDw ** 4), cw.dp, 1e-6, v => si(v, "Pa", 5));
+  return T;
+}
+function renderTests() {
+  const T = selfTests(), fail = T.filter(t => !t.ok).length;
+  $("testSum").className = "pill " + (fail ? "crit" : "good");
+  $("testSum").textContent = fail ? `${fail} / ${T.length} test başarısız` : `${T.length} / ${T.length} test geçti`;
+  $("tbTests").innerHTML = `<thead><tr><th>Test</th><th style="text-align:right">Analitik</th><th style="text-align:right">Model</th><th style="text-align:right">Bağıl hata</th><th style="text-align:right">Tolerans</th><th>Sonuç</th></tr></thead><tbody>` +
+    T.map(t => `<tr><td>${t.name}<small>${t.group} · ${t.detail}</small></td><td class="n">${t.ref}</td><td class="n">${t.val}</td><td class="n">${t.err < 1e-12 ? "< 1e-12" : t.err.toExponential(1)}</td><td class="n">${t.tol.toExponential(0)}</td><td><span class="pill ${t.ok ? "good" : "crit"}">${t.ok ? "Geçti" : "Kaldı"}</span></td></tr>`).join("") + "</tbody>";
+}
+$("runTests").addEventListener("click", renderTests);
+setTimeout(renderTests, 300);
+
+/* inputs */
+function link(num, rng) {
+  $(num).addEventListener("input", () => { $(rng).value = $(num).value; schedule(); });
+  $(rng).addEventListener("input", () => { $(num).value = $(rng).value; schedule(); });
+}
+link("B", "Br"); link("f", "fr"); link("N", "Nr");
+document.querySelectorAll(".rail input[type=number]").forEach(el => { if (!["B", "f", "N"].includes(el.id)) el.addEventListener("input", schedule); });
+$("type").addEventListener("change", () => {
+  const t = $("type").value;
+  ["tube", "solid", "litz"].forEach(k => { const g = $("g-" + k); g.hidden = k !== t; g.style.display = k === t ? "flex" : ""; });
+  syncCool();
+  schedule();
+});
+function syncCool() {
+  const wOpt = $("cool").querySelector('option[value="water"]');
+  wOpt.disabled = $("type").value !== "tube";
+  if (wOpt.disabled && $("cool").value === "water") $("cool").value = "fan";
+  $("g-water").hidden = $("cool").value !== "water";
+}
+$("cool").addEventListener("change", () => { syncCool(); schedule(); });
+syncCool();
+$("bpk").addEventListener("click", () => { Bmode = "pk"; $("bpk").setAttribute("aria-pressed", "true"); $("brms").setAttribute("aria-pressed", "false"); schedule(); });
+$("brms").addEventListener("click", () => { Bmode = "rms"; $("brms").setAttribute("aria-pressed", "true"); $("bpk").setAttribute("aria-pressed", "false"); schedule(); });
+function setUnit(u) {
+  if (u === Bunit) return;
+  const v = parseFloat($("B").value), k = 1 / (MU0 * 1e6); // 1 mT -> kA/m
+  Bunit = u;
+  $("umT").setAttribute("aria-pressed", String(u === "mT")); $("ukAm").setAttribute("aria-pressed", String(u !== "mT"));
+  $("Bunit").textContent = u === "mT" ? "mT" : "kA/m";
+  const r = $("Br");
+  if (u === "mT") { r.min = 1; r.max = 10; r.step = 0.1; $("B").step = 0.1; }
+  else { r.min = 0.8; r.max = 8; r.step = 0.05; $("B").step = 0.05; }
+  if (isFinite(v)) $("B").value = +(u === "mT" ? v / k : v * k).toFixed(4);
+  r.value = $("B").value;
+  schedule();
+}
+$("umT").addEventListener("click", () => setUnit("mT"));
+$("ukAm").addEventListener("click", () => setUnit("kAm"));
+$("sx").addEventListener("change", runSweep); $("sy").addEventListener("change", runSweep);
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(drawHeat, 80); });
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawHeat); } catch (_) {}
+new MutationObserver(drawHeat).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawHeat);
+run();
+//pwa
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+//\pwa
+</script>
+</body>
+</html>
