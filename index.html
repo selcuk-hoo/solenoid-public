@@ -260,7 +260,7 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
           <button type="button" id="brms" aria-pressed="false">RMS</button>
         </div>
         <div class="row"><label for="f">Frekans <small>kHz</small></label><input id="f" type="number" value="250" min="1" step="5"></div>
-        <input id="fr" type="range" min="100" max="500" step="5" value="250" aria-label="Frekans kaydırıcısı">
+        <input id="fr" type="range" min="10" max="500" step="5" value="250" aria-label="Frekans kaydırıcısı">
         <div class="row"><label for="T">İletken sıcaklığı <small>°C</small></label><input id="T" type="number" value="40" step="5"></div>
       </fieldset>
       </details>
@@ -491,7 +491,7 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
         </div>
         <div class="expSliders">
           <label for="expD"><span>Çekirdek çapı</span><b id="expDv"></b><input id="expD" type="range" min="4" max="30" step="0.1" value="14"></label>
-          <label for="expF"><span>Frekans</span><b id="expFv"></b><input id="expF" type="range" min="100" max="500" step="1" value="250"></label>
+          <label for="expF"><span>Frekans</span><b id="expFv"></b><input id="expF" type="range" min="0" max="1000" step="1" value="766" aria-label="Frekans (logaritmik)"></label>
           <label for="expH"><span>Alan (tepe)</span><b id="expHv"></b><input id="expH" type="range" min="0.2" max="20" step="0.05" value="4"></label>
         </div>
         <p class="hint" id="expNote" hidden></p>
@@ -577,7 +577,7 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
       <section class="card">
         <div class="card-head">
           <h2>Frekans ve alan optimizasyonu</h2>
-          <p>Mevcut bobin ve parçacıkla 100–500 kHz ve sıfırdan seçilen en yüksek alana kadar taranır. Renk: numunenin ısınma hızı. Gri taralı bölge en az bir sınırı aşar.</p>
+          <p>Mevcut bobin ve parçacıkla seçilen frekans aralığı (logaritmik eksen) ve sıfırdan seçilen en yüksek alana kadar taranır. Renk: numunenin ısınma hızı. Gri taralı bölge en az bir sınırı aşar.</p>
         </div>
         <div class="optctl">
           <label for="optObj">Amaç
@@ -597,6 +597,9 @@ canvas#jCv { width: 100%; display: block; border-radius: 4px; }
           <label for="optV">En yüksek gerilim <small>V tepe</small><input id="optV" type="number" value="1000" min="10" step="100"></label>
           <label for="optI">En yüksek akım <small>A tepe</small><input id="optI" type="number" value="200" min="1" step="10"></label>
           <label for="optP">En yüksek bobin gücü <small>W</small><input id="optP" type="number" value="300" min="1" step="50"></label>
+          <label for="optFmin">Frekans aralığı <small>kHz</small>
+            <span style="display:flex;gap:6px"><input id="optFmin" type="number" value="20" min="1" step="10" aria-label="En düşük frekans"><input id="optFmax" type="number" value="500" min="2" step="50" aria-label="En yüksek frekans"></span>
+          </label>
           <label for="optHmax">Taranan en yüksek alan <small>kA/m</small><input id="optHmax" type="number" value="30" min="1" step="5"></label>
         </div>
         <div class="figure">
@@ -1646,7 +1649,7 @@ function runSweep() {
   }[sy];
   let xs = [], ys = [], xLabel, xName, fx, markX, xScale = 1;
   if (sx === "f") {
-    for (let f = 100e3; f <= 500e3 + 1; f += 10e3) { xs.push(f / 1000); ys.push(pick(evaluate(p, f))); }
+    for (let f = 20e3; f <= 500e3 + 1; f += 10e3) { xs.push(f / 1000); ys.push(pick(evaluate(p, f))); }
     xLabel = "Frekans (kHz)"; xName = "f"; fx = v => dec(v, 3); markX = p.f / 1000;
   } else if (sx === "N") {
     const nmax = Math.min(Math.floor(p.len / condOD(p)), 200);
@@ -1931,7 +1934,7 @@ function renderNP(p, e) {
 let optState = null;
 function optimize(p, c) {
   const fs = [], Hs = [], nf = 41, nh = 60, Href = 1000;
-  for (let i = 0; i < nf; i++) fs.push(100e3 + 400e3 * i / (nf - 1));
+  fs.push(...fGrid(c, nf));
   for (let j = 0; j < nh; j++) Hs.push(c.Hmax * (j + 1) / nh);
   // coil quantities scale exactly with H at fixed f: I, V ∝ H, P ∝ H²
   const q0 = { ...p, Bmode: "pk", B: MU0 * Href };
@@ -1949,9 +1952,9 @@ function optimize(p, c) {
   }));
   // local refinement around the grid optimum
   if (best) {
-    const df = 400e3 / (nf - 1), dh = c.Hmax / nh;
+    const rf = Math.pow((c.fmax || 500e3) / (c.fmin || 100e3), 1 / (nf - 1)), dh = c.Hmax / nh;
     for (let a = -5; a <= 5; a++) {
-      const f = best.f + a * df / 5; if (f < 100e3 || f > 500e3) continue;
+      const f = best.f * Math.pow(rf, a / 5); if (f < (c.fmin || 100e3) * 0.999 || f > (c.fmax || 500e3) * 1.001) continue;
       const e = evaluate(q0, f), I1 = e.Ipk / Href, V1 = e.Vmax / Href, P1 = e.P / (Href * Href);
       for (let k = -10; k <= 10; k++) {
         const H = best.H + k * dh / 10; if (H <= 0 || H > c.Hmax) continue;
@@ -1964,8 +1967,17 @@ function optimize(p, c) {
   }
   return { fs, Hs, cols, grid, best, rmax: rmaxOk || rmax, c };
 }
+// log-spaced frequency grid, axis mapping and ticks shared by both maps
+function fGrid(c, n) { const a = c.fmin || 100e3, b = c.fmax || 500e3, out = []; for (let i = 0; i < n; i++) out.push(a * Math.pow(b / a, i / (n - 1))); return out; }
+function fTicks(c) {
+  const a = (c.fmin || 100e3) / 1e3, b = (c.fmax || 500e3) / 1e3;
+  let t = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].filter(v => v >= a * 0.999 && v <= b * 1.001);
+  if (t.length < 3) t = [1, 2, 3, 5, 7, 10, 15, 20, 30, 50, 70, 100, 150, 200, 300, 500, 700, 1000].filter(v => v >= a * 0.999 && v <= b * 1.001);
+  return t;
+}
 function optCfg() {
-  return { obj: $("optObj").value, target: +$("optTarget").value / 60, hf: +$("optHf").value, V: +$("optV").value, I: +$("optI").value, P: +$("optP").value, Hmax: +$("optHmax").value * 1000 };
+  const fmin = Math.max(1, +$("optFmin").value || 20) * 1e3, fmax = Math.max(fmin * 1.5, (+$("optFmax").value || 500) * 1e3);
+  return { obj: $("optObj").value, target: +$("optTarget").value / 60, hf: +$("optHf").value, V: +$("optV").value, I: +$("optI").value, P: +$("optP").value, Hmax: +$("optHmax").value * 1000, fmin, fmax };
 }
 const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 function rampColor(t) {
@@ -2023,7 +2035,7 @@ function drawOpt() {
   cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + "px";
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const ml = 54, mr = 86, mt = 10, mb = 38, pw = W - ml - mr, ph = H - mt - mb;
-  const X = f => ml + (f - 100e3) / 400e3 * pw, Y = h => mt + ph - h / o.c.Hmax * ph;
+  const lf = Math.log(o.fs[o.fs.length - 1] / o.fs[0]), X = f => ml + Math.log(f / o.fs[0]) / lf * pw, Y = h => mt + ph - h / o.c.Hmax * ph;
   g.fillStyle = col("--panel"); g.fillRect(0, 0, W, H);
   const nf = o.fs.length, nh = o.Hs.length, cw = pw / (nf - 1), chh = ph / nh;
   for (const cell of o.grid) {
@@ -2058,7 +2070,7 @@ function drawOpt() {
   // axes
   g.strokeStyle = col("--line"); g.strokeRect(ml, mt, pw, ph);
   g.fillStyle = col("--muted"); g.textAlign = "center";
-  for (let f = 100; f <= 500; f += 100) g.fillText(f + "", X(f * 1e3), H - mb + 16);
+  fTicks(o.c).forEach(f => g.fillText(f + "", X(f * 1e3), H - mb + 16));
   g.fillText("Frekans (kHz)", ml + pw / 2, H - 6);
   g.textAlign = "right";
   niceTicks(0, o.c.Hmax / 1000, 5).forEach(v => { if (v <= o.c.Hmax / 1000) g.fillText(dec(v, 3), ml - 6, Y(v * 1000) + 4); });
@@ -2088,7 +2100,7 @@ $("optApply").addEventListener("click", () => {
   schedule();
 });
 ["optObj", "optHf"].forEach(id => $(id).addEventListener("change", renderOpt));
-["optTarget", "optV", "optI", "optP", "optHmax"].forEach(id => $(id).addEventListener("input", () => { clearTimeout(optTimer); optTimer = setTimeout(renderOpt, 150); }));
+["optTarget", "optV", "optI", "optP", "optHmax", "optFmin", "optFmax"].forEach(id => $(id).addEventListener("input", () => { clearTimeout(optTimer); optTimer = setTimeout(renderOpt, 150); }));
 let optTimer = null;
 ["npUpt", "npCells", "npRc", "npDT", "npC"].forEach(id => $(id).addEventListener("input", () => cur && renderNP(cur.p, cur.e)));
 window.addEventListener("resize", () => { if (!$("tab-opt").hidden) drawOpt(); });
@@ -2102,9 +2114,9 @@ function hStar(col, c) {
   return lims.reduce((a, b) => (b[1] < a[1] ? b : a));
 }
 function optJoint(p, c, imm, dmin, dmax) {
-  const nf = 41, Href = 1000, q0 = { ...p, Bmode: "pk", B: MU0 * Href };
+  const nf = c.nf || 41, Href = 1000, q0 = { ...p, Bmode: "pk", B: MU0 * Href };
   const fs = [], ds = [];
-  for (let i = 0; i < nf; i++) fs.push(100e3 + 400e3 * i / (nf - 1));
+  fs.push(...(nf === 1 ? [c.fmin] : fGrid(c, nf)));
   for (let d = dmin; d <= dmax + 1e-9; d += 0.5) ds.push(d * 1e-9);
   const pp = { ...p, mImm: imm };
   const cols = fs.map(f => { const e = evaluate(q0, f), col = { f, I1: e.Ipk / Href, V1: e.Vmax / Href, P1: e.P / (Href * Href) }; const [lim, H] = hStar(col, c); return { ...col, H, lim }; });
@@ -2131,7 +2143,11 @@ function optJoint(p, c, imm, dmin, dmax) {
     rmax = Math.max(rmax, c.obj === "rate" ? cell.rate : 1 / cell.Pc);
     if (c.obj === "rate" ? (!best || cell.rate > best.rate) : (!best || cell.Pc < best.Pc)) best = cell;
   }));
-  return { fs, ds, cols, grid, best, rmax, c, imm };
+  return { fs, ds, cols, grid, best, rmax, c, imm, p };
+}
+function jointColumn(p, c, imm, f, ds) {
+  const d0 = ds[0] * 1e9, d1 = ds[ds.length - 1] * 1e9;
+  return optJoint(p, { ...c, fmin: f, fmax: f, nf: 1 }, imm, d0, d1);
 }
 function renderJoint(p, c) {
   const card = $("jointCard"), msg = $("jMsg");
@@ -2148,14 +2164,17 @@ function renderJoint(p, c) {
   const bestAt = (S, i) => { let bb = null; for (const g of S.grid) if (g.i === i && g.ok && (S.c.obj === "rate" ? (!bb || g.rate > bb.rate) : (!bb || g.Pc < bb.Pc))) bb = g; return bb; };
   const band = (S, i, bb) => { if (!bb) return null; const lo = [], key = S.c.obj === "rate"; for (const g of S.grid) if (g.i === i && g.ok && (key ? g.rate >= 0.8 * bb.rate : g.Pc <= 1.25 * bb.Pc)) lo.push(g.d); return [Math.min(...lo), Math.max(...lo)]; };
   const rows = [];
-  for (let i = 0; i < J.fs.length; i += 5) {
-    const bb = bestAt(J, i), bo = bestAt(Jo, i), bd = band(J, i, bb);
-    rows.push({ f: J.fs[i], bb, bo, bd });
+  // table rows at exact "round" frequencies, evaluated separately from the map grid
+  const nice = [10, 20, 30, 50, 75, 100, 150, 200, 300, 400, 500, 700, 1000].map(v => v * 1e3).filter(v => v >= J.fs[0] * 0.999 && v <= J.fs[J.fs.length - 1] * 1.001);
+  for (const fn of nice) {
+    const Sj = jointColumn(p, c, imm, fn, J.ds), So = jointColumn(p, c, !imm, fn, J.ds);
+    const bb = bestAt(Sj, 0), bo = bestAt(So, 0), bd = band(Sj, 0, bb);
+    rows.push({ f: fn, bb, bo, bd, lim: Sj.cols[0].lim, xi: bb ? MU0 * p.mMs * bb.H * Math.PI / 6 * bb.d ** 3 / (KB * (p.mT + 273.15)) : 0 });
   }
   const envName = imm ? "hücre içi" : "sıvıda", othName = imm ? "sıvıda" : "hücre içi";
-  $("tbJoint").innerHTML = `<thead><tr><th style="text-align:left">Frekans</th><th style="text-align:right">En iyi çap (${envName})</th><th style="text-align:right">%80 bandı</th><th style="text-align:right">En iyi çap (${othName})</th><th style="text-align:right">Alan</th><th style="text-align:right">Alanı sınırlayan</th><th style="text-align:right">${c.obj === "rate" ? "Isınma" : "Bobin gücü"}</th></tr></thead><tbody>` +
-    rows.map(r => `<tr><td class="k">${si(r.f, "Hz")}</td><td class="v">${r.bb ? dec(r.bb.d * 1e9, 3) + " nm" : "–"}</td><td class="v">${r.bd ? `${dec(r.bd[0] * 1e9, 3)}–${dec(r.bd[1] * 1e9, 3)} nm` : "–"}</td><td class="v">${r.bo ? dec(r.bo.d * 1e9, 3) + " nm" : "–"}</td><td class="v">${r.bb ? dec(r.bb.H / 1000, 3) + " kA/m" : "–"}</td><td class="v">${J.cols[J.fs.indexOf(r.f)].lim}</td><td class="v">${r.bb ? (c.obj === "rate" ? fmtR(r.bb.rate) : si(r.bb.Pc, "W")) : "–"}</td></tr>`).join("") + "</tbody>";
-  $("jLegend").innerHTML = `<span><i style="background:linear-gradient(90deg,${RAMP.join(",")});width:60px"></i>${c.obj === "rate" ? `ısınma hızı 0 → ${dec(J.rmax * 60, 3)} K/dk` : "bobin gücü: koyu = az güç"}</span><span><i style="background:var(--copper);border-radius:50%;width:10px;height:10px"></i>en iyi</span><span><i style="border:2px solid var(--ink);border-radius:50%;width:10px;height:10px;background:transparent"></i>mevcut</span><span><i class="ln" style="background:var(--ink)"></i>her frekansta en iyi çap</span>`;
+  $("tbJoint").innerHTML = `<thead><tr><th style="text-align:left">Frekans</th><th style="text-align:right">En iyi çap (${envName})</th><th style="text-align:right">%80 bandı</th><th style="text-align:right">En iyi çap (${othName})</th><th style="text-align:right">Alan</th><th style="text-align:right">Alanı sınırlayan</th><th style="text-align:right">${c.obj === "rate" ? "Isınma" : "Bobin gücü"}</th><th style="text-align:right;text-transform:none">ξ</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="k">${si(r.f, "Hz")}</td><td class="v">${r.bb ? dec(r.bb.d * 1e9, 3) + " nm" : "–"}</td><td class="v">${r.bd ? `${dec(r.bd[0] * 1e9, 3)}–${dec(r.bd[1] * 1e9, 3)} nm` : "–"}</td><td class="v">${r.bo ? dec(r.bo.d * 1e9, 3) + " nm" : "–"}</td><td class="v">${r.bb ? dec(r.bb.H / 1000, 3) + " kA/m" : "–"}</td><td class="v">${r.lim}</td><td class="v">${r.bb ? (c.obj === "rate" ? fmtR(r.bb.rate) : si(r.bb.Pc, "W")) : "–"}</td><td class="v">${r.bb ? `<span style="color:var(--${r.xi > 1 ? "warn" : "ink"})">${dec(r.xi, 2)}</span>` : "–"}</td></tr>`).join("") + "</tbody>";
+  $("jLegend").innerHTML = `<span><i style="background:linear-gradient(90deg,${RAMP.join(",")});width:60px"></i>${c.obj === "rate" ? `ısınma hızı 0 → ${dec(J.rmax * 60, 3)} K/dk` : "bobin gücü: koyu = az güç"}</span><span><i style="background:var(--copper);border-radius:50%;width:10px;height:10px"></i>en iyi</span><span><i style="border:2px solid var(--ink);border-radius:50%;width:10px;height:10px;background:transparent"></i>mevcut</span><span><i class="ln" style="background:var(--ink)"></i>her frekansta en iyi çap</span><span><i class="ln" style="background:var(--warn)"></i>ξ = 1: üstünde doğrusal model güvenilmez</span>`;
   // summary for the particle team
   const mat = (MNP_MAT[$("mmat").value] || { n: "Özel malzeme" }).n;
   const bd = b ? band(J, b.i, b) : null;
@@ -2165,6 +2184,7 @@ function renderJoint(p, c) {
     `Bobin ve sınırlar: ${hfTxt}; gerilim ≤ ${dec(c.V, 4)} V tepe; akım ≤ ${dec(c.I, 4)} A tepe; bobin gücü ≤ ${dec(c.P, 4)} W.`,
     b ? `Önerilen çalışma noktası: ${si(b.f, "Hz")}, H = ${dec(b.H / 1000, 3)} kA/m (${dec(MU0 * b.H * 1000, 3)} mT tepe).` : "Sınırlar içinde uygun nokta bulunamadı.",
     b ? `Bu noktada en iyi çekirdek çapı: ${dec(b.d * 1e9, 3)} nm (${c.obj === "rate" ? "ısınmanın %80’i" : "gücün 1,25 katı"} içinde kalan aralık: ${dec(bd[0] * 1e9, 3)}–${dec(bd[1] * 1e9, 3)} nm). ${c.obj === "rate" ? `Beklenen ısınma (ideal, ${dec(p.cmnp, 3)} mg/mL): ${fmtR(b.rate)}.` : `Gereken bobin gücü: ${si(b.Pc, "W")}.`}` : "",
+    b && MU0 * p.mMs * b.H * Math.PI / 6 * b.d ** 3 / (KB * (p.mT + 273.15)) > 1 ? `Uyarı: bu noktada ξ = µ₀MsVH/kT > 1; parçacık doğrusal yanıt bölgesinin dışında (doyuma yaklaşıyor). Gerçek SLP modelden farklı olabilir; düşük frekans–yüksek alan bölgesinde ölçümle doğrulayın.` : "",
     b ? (() => { const ks = [0.7, 1.3].map(k => bestSize({ ...p, mImm: imm, mK: p.mK * k }, b.H, b.f)[0] * 1e9); return `Anizotropiye duyarlılık: K %30 düşükse en iyi çap ${dec(ks[0], 3)} nm, %30 yüksekse ${dec(ks[1], 3)} nm. Çap hedefi, etkin K ölçülmeden kesinleştirilmemeli.`; })() : "",
     "Frekansa göre en iyi çekirdek çapı (" + envName + " / " + othName + "):",
     ...rows.map(r => `  ${si(r.f, "Hz")}: ${r.bb ? dec(r.bb.d * 1e9, 3) : "–"} nm / ${r.bo ? dec(r.bo.d * 1e9, 3) : "–"} nm`),
@@ -2180,7 +2200,7 @@ function drawJoint() {
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const ml = 54, mr = 16, mt = 10, mb = 38, pw = W - ml - mr, ph = H - mt - mb;
   const d0 = J.ds[0], d1 = J.ds[J.ds.length - 1];
-  const X = f => ml + (f - 100e3) / 400e3 * pw, Y = d => mt + ph - (d - d0) / (d1 - d0) * ph;
+  const lf = Math.log(J.fs[J.fs.length - 1] / J.fs[0]), X = f => ml + Math.log(f / J.fs[0]) / lf * pw, Y = d => mt + ph - (d - d0) / (d1 - d0) * ph;
   g.fillStyle = col("--panel"); g.fillRect(0, 0, W, H);
   const cw = pw / (J.fs.length - 1), chh = ph / (J.ds.length - 1);
   for (const c of J.grid) {
@@ -2198,9 +2218,21 @@ function drawJoint() {
     const x = X(f), y = Y(bb.d); if (!st) { g.moveTo(x, y); st = true; } else g.lineTo(x, y);
   });
   g.stroke();
+  // ξ = 1 line: above it (larger cores at the column's field) the linear-response model loses validity
+  {
+    const kT = KB * (J.p.mT + 273.15);
+    g.strokeStyle = col("--warn"); g.lineWidth = 1.6; g.setLineDash([6, 4]); g.beginPath(); let s2 = false, lastPt = null;
+    for (const c of J.cols) {
+      const dx = Math.cbrt(6 * kT / (Math.PI * MU0 * J.p.mMs * c.H));
+      if (dx < d0 || dx > d1) { s2 = false; continue; }
+      const x = X(c.f), y = Y(dx); if (!s2) { g.moveTo(x, y); s2 = true; } else g.lineTo(x, y); lastPt = [x, y];
+    }
+    g.stroke(); g.setLineDash([]);
+    if (lastPt) { g.fillStyle = col("--warn"); g.font = "11px " + col("--f-mono"); g.textAlign = "right"; g.fillText("ξ = 1", lastPt[0] - 4, lastPt[1] - 6); }
+  }
   g.strokeStyle = col("--line"); g.lineWidth = 1; g.strokeRect(ml, mt, pw, ph);
   g.fillStyle = col("--muted"); g.font = "11px " + col("--f-mono"); g.textAlign = "center";
-  for (let f = 100; f <= 500; f += 100) g.fillText(f + "", X(f * 1e3), H - mb + 16);
+  fTicks(J.c).forEach(f => g.fillText(f + "", X(f * 1e3), H - mb + 16));
   g.fillText("Frekans (kHz)", ml + pw / 2, H - 6);
   g.textAlign = "right";
   niceTicks(d0 * 1e9, d1 * 1e9, 6).forEach(v => { if (v >= d0 * 1e9 - 1e-9 && v <= d1 * 1e9 + 1e-9) g.fillText(dec(v, 2), ml - 6, Y(v * 1e-9) + 4); });
@@ -2230,9 +2262,11 @@ window.addEventListener("resize", () => { if (!$("tab-opt").hidden) drawJoint();
 /* ---------- explorer: sliders + energy flow ---------- */
 let expDragging = false, expTimer = null;
 function expSet(id, v) { $(id).value = v; }
+// frequency slider is logarithmic, 10–500 kHz (value 0..1000), returned in kHz rounded to 3 significant digits
+function expFreq() { const f = 10 * Math.pow(50, +$("expF").value / 1000); return +f.toPrecision(3); }
 // push slider values into the main inputs (field slider is peak H in A/m)
 function expToInputs() {
-  const d = +$("expD").value, f = +$("expF").value, H = +$("expH").value * 1000;
+  const d = +$("expD").value, f = expFreq(), H = +$("expH").value * 1000;
   $("md").value = d;
   $("f").value = f; $("fr").value = f;
   const Bpk = MU0 * H, val = Bmode === "pk" ? Bpk : Bpk / Math.SQRT2;
@@ -2250,7 +2284,7 @@ function expQuick() {
 }));
 function renderExplore(p, e, syncSliders = true) {
   const H = e.Bpk / MU0, f = e.f, isMnp = p.htype === "mnp" && p.mmode === "model";
-  if (syncSliders && !expDragging) { expSet("expD", p.md * 1e9); expSet("expF", f / 1000); expSet("expH", H / 1000); }
+  if (syncSliders && !expDragging) { expSet("expD", p.md * 1e9); expSet("expF", Math.round(1000 * Math.log(Math.min(500e3, Math.max(10e3, f)) / 10e3) / Math.log(50))); expSet("expH", H / 1000); }
   $("expD").disabled = !isMnp;
   $("expNote").hidden = isMnp;
   $("expNote").textContent = isMnp ? "" : "Çap sürgüsü yalnızca Isıtılan malzeme → Manyetik nanoparçacık → Parçacık modeli seçiliyken etkindir.";
@@ -2348,7 +2382,7 @@ function renderHeat(p, e, roi) {
   // field vs frequency: H constant vs H·f constant
   const xs = [], a1 = [], a2 = [], b1 = [];
   const p0 = { ...p, k: 1 };
-  for (let f = 100e3; f <= 500e3 + 1; f += 10e3) {
+  for (let f = 20e3; f <= 500e3 + 1; f += 10e3) {
     xs.push(f / 1000);
     const H2 = Hf / f;
     const s1 = heatSample(p, H, f).P, s2 = heatSample(p, H2, f).P;
@@ -2367,7 +2401,7 @@ function renderHeat(p, e, roi) {
   const rec = [];
   if (p.htype === "mnp") {
     rec.push(p.mmode === "model" ? `Bu parçacık için ısınma şu an yaklaşık H<sup>${dec(locExp(p, H, e.f)[0], 2)}</sup>·f<sup>${dec(locExp(p, H, e.f)[1], 2)}</sup> ile ölçekleniyor (tablodaki son satır). Frekans üssü gevşeme süresine bağlıdır: 2πfτ ≪ 1 ise ~2, ≫ 1 ise ~0.` : `Nanoparçacık ısınması alanla karesel, frekansla doğrusal artar. Alanı 2 katına çıkarmak ısıtmayı 4 kat, frekansı 2 katına çıkarmak 2 kat artırır; ikisi de bobin gerilimini 2 kat artırır. Gerilim bütçesi sınırlıysa alan, frekanstan daha verimli bir kaldıraçtır.`);
-    rec.push(`H·f sınırı altında çalışırken frekansı düşürüp alanı yükseltin: ısıtma ∝ (Hf)²/f. Örneğin bu H·f ile 100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır. Bedeli: bobin kaybı daha da hızlı artar (∝ f⁻¹·⁵), verim √f ile düşer; düşük frekans daha güçlü sürücü ve soğutma ister. Bobin gerilimi H·f ile orantılı olduğundan değişmez.`.replace("100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır", `100 kHz’te ısıtma, 500 kHz’tekinin ${dec(a2[0] / a2[a2.length - 1], 2)} katıdır`));
+    rec.push(`H·f sınırı altında çalışırken frekansı düşürüp alanı yükseltin: ısıtma ∝ (Hf)²/f. Örneğin bu H·f ile 100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır. Bedeli: bobin kaybı daha da hızlı artar (∝ f⁻¹·⁵), verim √f ile düşer; düşük frekans daha güçlü sürücü ve soğutma ister. Bobin gerilimi H·f ile orantılı olduğundan değişmez.`.replace("100 kHz’te ısıtma, 500 kHz’tekinin 5 katıdır", `100 kHz’te ısıtma, 500 kHz’tekinin ${dec(a2[xs.indexOf(100)] / a2[a2.length - 1], 2)} katıdır`));
     if (p.mmode !== "model") rec.push(`ILP sabit kabulü parçacığın gevşeme süresine bağlıdır. Néel gevşemeli küçük parçacıklarda (2πfτ ≪ 1) frekansın katkısı daha güçlü (∝ f²) olabilir. Ölçülmüş SLP–frekans verisi varsa ILP’yi çalışma frekansındaki değerle girin.`);
   } else if (p.htype === "tis") {
     rec.push(`Doku girdap ısınması hem alanla hem frekansla karesel artar (∝ f²H²); H·f sabitken frekanstan bağımsızdır. Bu yüzden canlıda sınır H·f çarpımı üzerine konur. Silindir yarıçapının karesiyle de büyür: büyük kesitli bölgeler daha çok ısınır.`);
@@ -2693,7 +2727,7 @@ function selfTests() {
     const pd = readParams();
     if (!validate(pd)) {
       const q = { ...pd, htype: "mnp", mmode: "ilp", ilp: 1e-9, cmnp: 0.15, vmnp: 1e-6 };
-      const o = optimize(q, { obj: "rate", hf: 4.85e8, V: 1e12, I: 1e12, P: 1e12, Hmax: 6000, target: 0 });
+      const o = optimize(q, { obj: "rate", hf: 4.85e8, V: 1e12, I: 1e12, P: 1e12, Hmax: 6000, target: 0, fmin: 100e3, fmax: 500e3 });
       add("Optimizasyon", "H·f sınırında en iyi nokta en düşük frekansta", "ILP modeli, yalnız H·f sınırı: f = 100 kHz", 100e3, o.best.f, 1e-9, v => si(v, "Hz", 4));
       add("Optimizasyon", "…ve alan sınıra dayanır", "H ≤ 4,85·10⁸/f, ızgara adımı kadar", 4.85e8 / 100e3, o.best.H, 6000 / 60 / 4850 + 1e-9, v => si(v, "A/m", 4));
     }
@@ -2702,7 +2736,7 @@ function selfTests() {
   {
     const pd = readParams();
     if (!validate(pd) && pd.htype === "mnp" && pd.mmode === "model") {
-      const c = { obj: "rate", hf: 5e9, V: 1000, I: 200, P: 300, Hmax: 30000, target: 0 };
+      const c = { obj: "rate", hf: 5e9, V: 1000, I: 200, P: 300, Hmax: 30000, target: 0, fmin: 20e3, fmax: 500e3 };
       const J = optJoint(pd, c, true, 4, 30), i = 20, col = J.cols[i];
       let bb = null; for (const g of J.grid) if (g.i === i && (!bb || g.rate > bb.rate)) bb = g;
       const bs = bestSize({ ...pd, mImm: true }, col.H, col.f);
